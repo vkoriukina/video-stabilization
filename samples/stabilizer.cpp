@@ -20,7 +20,7 @@ bool generateFinalShift()
 
 
 void Stabilizer::resizeVideo(const cv::Mat& frame, int number, cv::Mat& outputFrame){
-    cv::Rect rect(xsmoothed[number],ysmoothed[number],frame.size().width - maxX,frame.size().height - maxY);
+    cv::Rect rect(maxX - xsmoothed[number],maxY - ysmoothed[number],frame.size().width - 2*maxX,frame.size().height - 2*maxY);
     outputFrame = frame(rect);
 }
 
