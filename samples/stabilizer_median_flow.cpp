@@ -4,7 +4,7 @@
 #include <string>
 
 const char* params =
-     "{ h | video    |       | video file to stabilize                       }";
+     "{   | video    |       | video file to stabilize                       }";
 
 
 int main( int argc, char** argv )
@@ -28,12 +28,14 @@ int main( int argc, char** argv )
     stab.init(frame);
 
     cap >> frame;
-    while (!frame.empty())
+    while (true)
     {
 
         stab.track(frame);
 
         cap >> frame;
+        if(frame.empty())
+            break;
 
         cv::imshow("Video", frame);
         cv::waitKey(1);
