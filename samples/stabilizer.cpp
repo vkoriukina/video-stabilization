@@ -3,11 +3,18 @@
 #include <cmath>
 
 #include "opencv2/highgui/highgui.hpp"
+#include "opencv2/imgproc/imgproc.hpp"
 
 
 bool Stabilizer::init( const cv::Mat& frame)
 {
     prevFrame = frame.clone();
+
+    cv::Mat gray4cor;
+    cv::cvtColor(frame, gray4cor, cv::COLOR_BGR2GRAY);
+   
+    cv::goodFeaturesToTrack(gray4cor, previousFeatures, 100, 0.1, 5);
+
 	return true;
 }
 
