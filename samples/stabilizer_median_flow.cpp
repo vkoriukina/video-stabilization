@@ -39,6 +39,5 @@ int main( int argc, char** argv )
         cv::waitKey(1);
     }
 
-
     return 0;
 }
