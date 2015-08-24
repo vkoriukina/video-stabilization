@@ -1,11 +1,14 @@
 #include "stabilizer.hpp"
-#include "math.h"
-#include"opencv2\highgui\highgui.hpp"
+
+#include <cmath>
+
+#include "opencv2/highgui/highgui.hpp"
 
 
 bool Stabilizer::init( const cv::Mat& frame)
 {
-    return true;
+    prevFrame = frame.clone();
+	return true;
 }
 
 bool Stabilizer::track( const cv::Mat& frame)
