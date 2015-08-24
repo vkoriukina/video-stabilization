@@ -5,3 +5,5 @@
 Корюкина Валерия
 Киселева Надежда
 
+literature:
+http://nghiaho.com/uploads/code/videostab.cpp
