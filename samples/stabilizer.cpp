@@ -13,7 +13,7 @@ bool Stabilizer::track( const cv::Mat& frame)
     return true;
 }
 
-bool Stabilizer :: generateFinalShift()
+void Stabilizer :: generateFinalShift()
 {
     double xsum = 0;
     double ysum = 0;
@@ -39,9 +39,37 @@ bool Stabilizer :: generateFinalShift()
             ysmoothed.push_back(avg_y);
         }
     }
-    return true;
 }
 
+void Stabilizer :: drawPlots()
+{
+    int plotWidth = 200; 
+    int plotHeight = 200; 
+
+    std::vector<cv::Point> plot; 
+
+    //for(int i=0; i < xshift.size(); i++)
+    //{
+    //    plot.push_back(cv::Point(i,xsmoothed[i]));
+    //}
+    cv::Mat img;
+
+    for(unsigned int i=1; i<xshift.size(); ++i)
+    {
+
+        cv::Point2f p1; p1.x = i-1; p1.y = plot[i-1].x;
+        cv::Point2f p2; p2.x = i;   p2.y = plot[i].x;
+        cv::line(img, p1, p2, 'r', 5, 8, 0);
+    }
+
+    //the image to be plotted 
+   // cv::Mat img = cv::Mat::zeros(plotHeight,plotWidth, CV_8UC3); 
+
+    cv::namedWindow("Plot", CV_WINDOW_AUTOSIZE); 
+    cv::imshow("Plot", img); //display the image which is stored in the 'img' in the "MyWindow" window
+    cv::waitKey(0);
+
+}
 
 void Stabilizer::resizeVideo(const cv::Mat& frame, int number, cv::Mat& outputFrame){
     cv::Rect rect(xsmoothed[number],ysmoothed[number],frame.size().width - maxX,frame.size().height - maxY);

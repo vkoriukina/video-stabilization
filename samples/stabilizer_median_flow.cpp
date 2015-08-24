@@ -24,8 +24,8 @@ int main( int argc, char** argv )
     {
 
         stab.track(frame);
-
         cap >> frame;
+
     }
     return 0;
 }
