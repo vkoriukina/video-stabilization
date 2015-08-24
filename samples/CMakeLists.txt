@@ -1,4 +1,4 @@
-set(target "tracking_sample")
+set(target "stabilizer")
 
 file(GLOB hdrs "*.hpp")
 file(GLOB srcs "*.cpp")
