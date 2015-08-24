@@ -15,4 +15,5 @@ class Stabilizer
 private:
     cv::Mat prevFrame;
     std::vector<float> xshift, yshift, xsmoothed, ysmoothed;
+	std::vector<cv::Point2f> previousFeatures;
 };
