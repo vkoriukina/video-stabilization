@@ -11,8 +11,11 @@ class Stabilizer
     bool init( const cv::Mat& frame);
     bool track( const cv::Mat& frame);
     bool generateFinalShift();
+    void resizeVideo(const cv::Mat& frame, int number, cv::Mat& outputFrame);
+    void caclMaxShifts();
 
 private:
     cv::Mat prevFrame;
     std::vector<float> xshift, yshift, xsmoothed, ysmoothed;
+    int maxX, maxY;
 };
