@@ -13,8 +13,32 @@ bool Stabilizer::track( const cv::Mat& frame)
     return true;
 }
 
-bool generateFinalShift()
+bool Stabilizer :: generateFinalShift()
 {
+    double xsum = 0;
+    double ysum = 0;
+    double avg_x = 0;
+    double avg_y = 0;
+    int count = 0;
+    int radius = 3;
+    for(int j=-radius; j <= radius; j++)
+    {
+        for(int i=0; i < xshift.size(); i++)
+        {
+            if(i+j >= 0 && i+j < xshift.size())
+            {
+               xsum += xshift[i];
+               ysum += yshift[i];
+               count++;
+            }
+            
+            avg_x = xsum / count;
+            avg_y = ysum / count;
+
+            xsmoothed.push_back(avg_x);    
+            ysmoothed.push_back(avg_y);
+        }
+    }
     return true;
 }
 
