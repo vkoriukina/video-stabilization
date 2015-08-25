@@ -4,6 +4,9 @@
 #include "opencv2/imgproc/imgproc.hpp"
 #include "opencv2/video/video.hpp"
 
+#include <iostream>
+
+using namespace std;
 
 bool Stabilizer::init( const cv::Mat& frame)
 {
@@ -11,7 +14,7 @@ bool Stabilizer::init( const cv::Mat& frame)
     cv::Mat gray4cor;
     cv::cvtColor(frame, gray4cor, cv::COLOR_BGR2GRAY);
    
-    cv::goodFeaturesToTrack(gray4cor, previousFeatures, 100, 0.1, 5);
+    cv::goodFeaturesToTrack(gray4cor, previousFeatures, 200, 0.01, 30);
 
 	return true;
 }
@@ -87,8 +90,7 @@ bool Stabilizer::track( const cv::Mat& frame)
 
 void Stabilizer :: generateFinalShift()
 {
-    int radius = 3;
-
+    int radius = 12;
 
     for(int i = 1; i < xshift.size(); i ++)
         xshift[i] += xshift[i - 1];
@@ -122,7 +124,6 @@ void Stabilizer :: generateFinalShift()
         ysmoothed.push_back(yshift[i]);
     }
 
-
 }
 
 void Stabilizer :: drawPlots()
@@ -147,23 +148,40 @@ void Stabilizer :: drawPlots()
     }
 
     //the image to be plotted 
-   // cv::Mat img = cv::Mat::zeros(plotHeight,plotWidth, CV_8UC3); 
+    // cv::Mat img = cv::Mat::zeros(plotHeight,plotWidth, CV_8UC3); 
 
     cv::namedWindow("Plot", CV_WINDOW_AUTOSIZE); 
     cv::imshow("Plot", img); //display the image which is stored in the 'img' in the "MyWindow" window
     cv::waitKey(0);
-
 }
 
-void Stabilizer::resizeVideo(const cv::Mat& frame, int number, cv::Mat& outputFrame){
-    cv::Rect rect(xsmoothed[number],ysmoothed[number],frame.size().width - maxX,frame.size().height - maxY);
-    outputFrame = frame(rect);
+void Stabilizer::resizeVideo(cv::VideoCapture cap){
+    cv::Mat frame;
+    cap >> frame;
+    int k, number = 0;
+    while (true)
+    {
+        cv::Mat result(frame.size().height+200,frame.size().width + 200,CV_8UC3);
+        cap >> frame;
+        if(frame.empty())
+            break;
+        cv::Rect rect(int(maxX + (xsmoothed[number] - xshift[number])),int(maxY - (ysmoothed[number] + yshift[number])),frame.size().width,frame.size().height);
+        cv::Rect rectFrame(maxX,maxY,frame.size().width,frame.size().height);
+        frame.copyTo(result(rect));
+        cv::imshow("Video", frame);
+        cv::imshow("VideoNew", result(rectFrame));
+        k = cv::waitKey(1);
+        if(k == 27)
+            break;
+        number++;
+    }
 }
 
 
 void Stabilizer::caclMaxShifts(){
-    int x = 0,y = 0;
-    for (int i = 0 ; i < xsmoothed.size(); i++){
+    generateFinalShift();
+    float x = 0,y = 0;
+    for (int i = 0 ; i < xshift.size(); i++){
         if (abs(xsmoothed[i] - xshift[i]) > x){
             x = abs(xsmoothed[i] - xshift[i]);
         }
@@ -171,5 +189,5 @@ void Stabilizer::caclMaxShifts(){
             y = abs(ysmoothed[i] - yshift[i]);
         }
     }
-    maxX = x; maxY = y;
+    maxX = x + 30; maxY = y + 30;
 }
