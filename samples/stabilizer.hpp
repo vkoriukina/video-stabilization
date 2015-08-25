@@ -15,8 +15,8 @@ class Stabilizer
     void drawPlots();
     void resizeVideo(cv::VideoCapture cap);
     void caclMaxShifts();
+    void responce();
 
-private:
     cv::Mat prevFrame;
     std::vector<float> xshift, yshift, xsmoothed, ysmoothed;
     std::vector<cv::Point2f> previousFeatures;
