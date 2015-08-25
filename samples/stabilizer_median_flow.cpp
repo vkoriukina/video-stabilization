@@ -46,5 +46,10 @@ int main( int argc, char** argv )
             break;
     }
 
+    cv::VideoCapture cap2;
+    cap2.open( video_file );
+    stab.caclMaxShifts();
+    stab.resizeVideo(cap2);
+
     return 0;
 }
