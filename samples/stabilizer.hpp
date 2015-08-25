@@ -21,4 +21,5 @@ private:
     std::vector<float> xshift, yshift, xsmoothed, ysmoothed;
     std::vector<cv::Point2f> previousFeatures;
     int maxX, maxY;
+    int maxUp, maxLeft,maxRight, maxDown;
 };

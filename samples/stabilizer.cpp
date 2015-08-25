@@ -14,7 +14,7 @@ bool Stabilizer::init( const cv::Mat& frame)
     cv::Mat gray4cor;
     cv::cvtColor(frame, gray4cor, cv::COLOR_BGR2GRAY);
    
-    cv::goodFeaturesToTrack(gray4cor, previousFeatures, 100, 0.1, 5);
+    cv::goodFeaturesToTrack(gray4cor, previousFeatures, 200, 0.01, 30);
 
 	return true;
 }
@@ -92,7 +92,7 @@ bool Stabilizer::track( const cv::Mat& frame)
 
 void Stabilizer :: generateFinalShift()
 {
-    int radius = 3;
+    int radius = 12;
 
 
     for(int i = 1; i < xshift.size(); i ++)
@@ -163,10 +163,10 @@ void Stabilizer :: drawPlots()
 void Stabilizer::resizeVideo(cv::VideoCapture cap){
     cv::Mat frame;
     cap >> frame;
-    cv::Mat result(frame.size().height+200,frame.size().width + 200,CV_8UC3);
     int k, number = 0;
     while (true)
     {
+        cv::Mat result(frame.size().height+200,frame.size().width + 200,CV_8UC3);
         cap >> frame;
         if(frame.empty())
             break;
@@ -194,5 +194,5 @@ void Stabilizer::caclMaxShifts(){
             y = abs(ysmoothed[i] - yshift[i]);
         }
     }
-    maxX = x + 1; maxY = y + 1;
+    maxX = x + 30; maxY = y + 30;
 }
