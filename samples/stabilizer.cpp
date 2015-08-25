@@ -16,15 +16,20 @@ bool Stabilizer::init( const cv::Mat& frame)
 	return true;
 }
 
+namespace
+{
+    template<typename T>
+    T median(const std::vector<T>& x)
+    {
+        CV_Assert(!x.empty());
+        std::vector<T> y(x);
+        std::sort(y.begin(), y.end());
+        return y[y.size() / 2];
+    }
+}
+
 bool Stabilizer::track( const cv::Mat& frame)
 {
-    cv::Mat previous_frame_gray;
-    const int m = 100;
-    const double qLevel = 0.1;
-    const double dist = 5.0;
-
-    cvtColor(prevFrame, previous_frame_gray, cv::COLOR_BGR2GRAY);
-    cv::goodFeaturesToTrack(previous_frame_gray, previousFeatures, m, qLevel, dist);
     size_t n = previousFeatures.size();
     CV_Assert(n);
     
@@ -34,25 +39,28 @@ bool Stabilizer::track( const cv::Mat& frame)
     std::vector<float> error;
     cv::calcOpticalFlowPyrLK(prevFrame, frame, previousFeatures, currentFeatures, state, error);
 
-    std::sort(error.begin(), error.end());
-    double median_err = error[error.size()/2];
+    float median_error = median<float>(error);
+    /*std::vector<float>sorted_err(error); 
+    std::sort(sorted_err.begin(), sorted_err.end());
+    float median_error = sorted_err[sorted_err.size()/2];*/
+
     std::vector<cv::Point2f> good_points;
     std::vector<cv::Point2f> curr_points;
-
     for (size_t i = 0; i < n; ++i)
-        if ((state[i])&&(error[i]<=median_err))
+    {
+        if (state[i] && (error[i] <= median_error))
         {
             good_points.push_back(previousFeatures[i]);
             curr_points.push_back(currentFeatures[i]);
         }
-
+    }
 
     size_t s = good_points.size();
     CV_Assert(s == curr_points.size());
 
     // Find points shift.
-    std::vector<float> shifts_x(n);
-    std::vector<float> shifts_y(n);
+    std::vector<float> shifts_x(s);
+    std::vector<float> shifts_y(s);
 
     for (size_t i = 0; i < s; ++i)
     {
@@ -70,7 +78,10 @@ bool Stabilizer::track( const cv::Mat& frame)
 
     xshift.push_back(median_shift.x);
     yshift.push_back(median_shift.y);
+
     prevFrame = frame.clone();
+    std::copy(currentFeatures.begin(), currentFeatures.end(), previousFeatures.begin());
+
     return true;
 }
 
