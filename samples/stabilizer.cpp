@@ -128,10 +128,6 @@ void Stabilizer :: generateFinalShift()
 
 }
 
-void Stabilizer :: drawPlots()
-{
-
-}
 
 void Stabilizer::resizeVideo(cv::VideoCapture cap){
     cv::Mat frame;

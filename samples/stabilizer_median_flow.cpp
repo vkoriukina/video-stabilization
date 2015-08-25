@@ -46,7 +46,6 @@ int main( int argc, char** argv )
             break;
     }
 
-    //stab.generateFinalShift();
     std::cout << stab.xshift.size() << std::endl;
     std::cout << stab.yshift.size() << std::endl;
     std::cout << stab.xsmoothed.size() << std::endl;
@@ -55,7 +54,6 @@ int main( int argc, char** argv )
     cv::VideoCapture cap2;
     cap2.open( video_file );
     stab.caclMaxShifts();
-     std::cout << "1231231231231231" << std::endl;
     stab.resizeVideo(cap2);
 
     stab.responce();
