@@ -168,10 +168,10 @@ void Stabilizer::caclMaxShifts(){
 
 
 void Stabilizer::responce(){
-    ofstream out_trajectory("trajectory.txt");
-    ofstream out_smoothed_trajectory("smoothed_trajectory.txt");
+    ofstream out_Xtrajectories("Xtrajectory.txt");
+    ofstream out_Ytrajectories("Ytrajectory.txt");
     for (int i = 0 ; i < xshift.size(); i++) {
-        out_trajectory << xshift[i] << " " << yshift[i] << endl; 
-        out_smoothed_trajectory << xsmoothed[i] << " " << ysmoothed[i] << endl; 
+        out_Xtrajectories << xshift[i] << " " <<  xsmoothed[i] << endl; 
+        out_Ytrajectories << yshift[i] << " " <<  ysmoothed[i] << endl;
     }
 }
