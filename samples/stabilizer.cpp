@@ -30,13 +30,6 @@ namespace
 
 bool Stabilizer::track( const cv::Mat& frame)
 {
-    cv::Mat previous_frame_gray;
-    const int m = 100;
-    const double qLevel = 0.1;
-    const double dist = 5.0;
-
-    cvtColor(prevFrame, previous_frame_gray, cv::COLOR_BGR2GRAY);
-    cv::goodFeaturesToTrack(previous_frame_gray, previousFeatures, m, qLevel, dist);
     size_t n = previousFeatures.size();
     CV_Assert(n);
     
@@ -62,13 +55,12 @@ bool Stabilizer::track( const cv::Mat& frame)
         }
     }
 
-
     size_t s = good_points.size();
     CV_Assert(s == curr_points.size());
 
     // Find points shift.
-    std::vector<float> shifts_x(n);
-    std::vector<float> shifts_y(n);
+    std::vector<float> shifts_x(s);
+    std::vector<float> shifts_y(s);
 
     for (size_t i = 0; i < s; ++i)
     {
@@ -86,7 +78,10 @@ bool Stabilizer::track( const cv::Mat& frame)
 
     xshift.push_back(median_shift.x);
     yshift.push_back(median_shift.y);
+
     prevFrame = frame.clone();
+    std::copy(currentFeatures.begin(), currentFeatures.end(), previousFeatures.begin());
+
     return true;
 }
 
