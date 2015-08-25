@@ -76,13 +76,15 @@ bool Stabilizer::track( const cv::Mat& frame)
 
 void Stabilizer :: generateFinalShift()
 {
+    int radius = 3;
+
+
     for(int i = 1; i < xshift.size(); i ++)
         xshift[i] += xshift[i - 1];
     for(int i = 1; i < yshift.size(); i ++)
         yshift[i] += yshift[i - 1];
 
     
-    int radius = 3;
     for(int i=0; i < radius; i++)
     {
         xsmoothed.push_back(xshift[i]);
