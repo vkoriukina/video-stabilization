@@ -40,6 +40,7 @@ int main( int argc, char** argv )
         cv::imshow("Video", frame);
         cv::waitKey(1);
     }
+    stab.drawPlots();
 
     return 0;
 }

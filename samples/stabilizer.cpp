@@ -3,6 +3,7 @@
 #include "opencv2/highgui/highgui.hpp"
 #include "opencv2/imgproc/imgproc.hpp"
 #include "opencv2/video/video.hpp"
+#include <iostream>
 
 
 bool Stabilizer::init( const cv::Mat& frame)
@@ -84,6 +85,7 @@ void Stabilizer :: generateFinalShift()
     int radius = 3;
     for(int j=-radius; j <= radius; j++)
     {
+        xsum =0; ysum =0;
         for(int i=0; i < xshift.size(); i++)
         {
             if(i+j >= 0 && i+j < xshift.size())
@@ -96,9 +98,9 @@ void Stabilizer :: generateFinalShift()
             avg_x = xsum / count;
             avg_y = ysum / count;
 
-            xsmoothed.push_back(avg_x);    
-            ysmoothed.push_back(avg_y);
         }
+        xsmoothed.push_back(avg_x);    
+        ysmoothed.push_back(avg_y);
     }
 }
 
@@ -107,19 +109,21 @@ void Stabilizer :: drawPlots()
     int plotWidth = 200; 
     int plotHeight = 200; 
 
-    std::vector<cv::Point> plot; 
+    //std::vector<cv::Point> plot; 
 
     //for(int i=0; i < xshift.size(); i++)
     //{
     //    plot.push_back(cv::Point(i,xsmoothed[i]));
     //}
     cv::Mat img;
-
-    for(unsigned int i=1; i<xshift.size(); ++i)
+    //CV_Assert(xshift.size() == xsmoothed.size());
+    std::cout<< xshift.size()<< std::endl;
+    std::cout<< xsmoothed.size()<< std::endl;
+    for(unsigned int i=1; i < xsmoothed.size(); ++i)
     {
 
-        cv::Point2f p1; p1.x = i-1; p1.y = plot[i-1].x;
-        cv::Point2f p2; p2.x = i;   p2.y = plot[i].x;
+        cv::Point2f p1; p1.x = i-1; p1.y = xsmoothed[i-1];
+        cv::Point2f p2; p2.x = i;   p2.y = xsmoothed[i];
         cv::line(img, p1, p2, 'r', 5, 8, 0);
     }
 
@@ -127,7 +131,10 @@ void Stabilizer :: drawPlots()
    // cv::Mat img = cv::Mat::zeros(plotHeight,plotWidth, CV_8UC3); 
 
     cv::namedWindow("Plot", CV_WINDOW_AUTOSIZE); 
-    cv::imshow("Plot", img); //display the image which is stored in the 'img' in the "MyWindow" window
+    if (!img.empty()) 
+    {
+        cv::imshow("Plot", img);
+    }
     cv::waitKey(0);
 
 }
