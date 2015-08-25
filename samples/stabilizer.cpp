@@ -66,17 +66,20 @@ bool Stabilizer::track( const cv::Mat& frame)
     // Find median shift.
     cv::Point2f median_shift(shifts_x[s / 2], shifts_y[s / 2]);
 
-    //printf("%.4f %.4f\n", median_shift.x, median_shift.y);
+
+    if(median_shift.y > 0)
+        printf("%.4f %.4f\n", median_shift.x, median_shift.y);
 
     xshift.push_back(median_shift.x);
     yshift.push_back(median_shift.y);
     prevFrame = frame.clone();
+
     return true;
 }
 
 void Stabilizer :: generateFinalShift()
 {
-    int radius = 3;
+    int radius = 13;
 
 
     for(int i = 1; i < xshift.size(); i ++)
