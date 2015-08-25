@@ -1,6 +1,7 @@
 #pragma once
 
 #include <opencv2/core/core.hpp>
+#include "opencv2/highgui/highgui.hpp"
 #include <vector>
 
 class Stabilizer
@@ -12,7 +13,7 @@ class Stabilizer
     bool track( const cv::Mat& frame);
     void generateFinalShift();
     void drawPlots();
-    void resizeVideo(const cv::Mat& frame, int number, cv::Mat& outputFrame);
+    void resizeVideo(cv::VideoCapture cap);
     void caclMaxShifts();
 
 private:

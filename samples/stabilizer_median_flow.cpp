@@ -27,6 +27,8 @@ int main( int argc, char** argv )
     Stabilizer stab;
     stab.init(frame);
 
+
+    char k = 0;
     cap >> frame;
     while (true)
     {
@@ -38,8 +40,16 @@ int main( int argc, char** argv )
             break;
 
         cv::imshow("Video", frame);
-        cv::waitKey(1);
+        k = cv::waitKey(1);
+
+        if(k == 27)
+            break;
     }
+
+    cv::VideoCapture cap2;
+    cap2.open( video_file );
+    stab.caclMaxShifts();
+    stab.resizeVideo(cap2);
 
     return 0;
 }
