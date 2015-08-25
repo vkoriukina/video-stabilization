@@ -5,6 +5,9 @@
 #include "opencv2/video/video.hpp"
 #include <iostream>
 
+#include <iostream>
+
+using namespace std;
 
 bool Stabilizer::init( const cv::Mat& frame)
 {
@@ -12,20 +15,25 @@ bool Stabilizer::init( const cv::Mat& frame)
     cv::Mat gray4cor;
     cv::cvtColor(frame, gray4cor, cv::COLOR_BGR2GRAY);
    
-    cv::goodFeaturesToTrack(gray4cor, previousFeatures, 100, 0.1, 5);
+    cv::goodFeaturesToTrack(gray4cor, previousFeatures, 200, 0.01, 30);
 
 	return true;
 }
 
+namespace
+{
+    template<typename T>
+    T median(const std::vector<T>& x)
+    {
+        CV_Assert(!x.empty());
+        std::vector<T> y(x);
+        std::sort(y.begin(), y.end());
+        return y[y.size() / 2];
+    }
+}
+
 bool Stabilizer::track( const cv::Mat& frame)
 {
-    cv::Mat previous_frame_gray;
-    const int m = 100;
-    const double qLevel = 0.1;
-    const double dist = 5.0;
-
-    cvtColor(prevFrame, previous_frame_gray, cv::COLOR_BGR2GRAY);
-    cv::goodFeaturesToTrack(previous_frame_gray, previousFeatures, m, qLevel, dist);
     size_t n = previousFeatures.size();
     CV_Assert(n);
     
@@ -35,25 +43,28 @@ bool Stabilizer::track( const cv::Mat& frame)
     std::vector<float> error;
     cv::calcOpticalFlowPyrLK(prevFrame, frame, previousFeatures, currentFeatures, state, error);
 
-    std::sort(error.begin(), error.end());
-    double median_err = error[error.size()/2];
+    float median_error = median<float>(error);
+    /*std::vector<float>sorted_err(error); 
+    std::sort(sorted_err.begin(), sorted_err.end());
+    float median_error = sorted_err[sorted_err.size()/2];*/
+
     std::vector<cv::Point2f> good_points;
     std::vector<cv::Point2f> curr_points;
-
     for (size_t i = 0; i < n; ++i)
-        if ((state[i])&&(error[i]<=median_err))
+    {
+        if (state[i] && (error[i] <= median_error))
         {
             good_points.push_back(previousFeatures[i]);
             curr_points.push_back(currentFeatures[i]);
         }
-
+    }
 
     size_t s = good_points.size();
     CV_Assert(s == curr_points.size());
 
     // Find points shift.
-    std::vector<float> shifts_x(n);
-    std::vector<float> shifts_y(n);
+    std::vector<float> shifts_x(s);
+    std::vector<float> shifts_y(s);
 
     for (size_t i = 0; i < s; ++i)
     {
@@ -71,14 +82,16 @@ bool Stabilizer::track( const cv::Mat& frame)
 
     xshift.push_back(median_shift.x);
     yshift.push_back(median_shift.y);
+
     prevFrame = frame.clone();
+    std::copy(currentFeatures.begin(), currentFeatures.end(), previousFeatures.begin());
+
     return true;
 }
 
 void Stabilizer :: generateFinalShift()
 {
-    int radius = 3;
-
+    int radius = 12;
 
     for(int i = 1; i < xshift.size(); i ++)
         xshift[i] += xshift[i - 1];
@@ -112,22 +125,39 @@ void Stabilizer :: generateFinalShift()
         ysmoothed.push_back(yshift[i]);
     }
 
-
 }
 
 void Stabilizer :: drawPlots()
 {
 }
 
-void Stabilizer::resizeVideo(const cv::Mat& frame, int number, cv::Mat& outputFrame){
-    cv::Rect rect(xsmoothed[number],ysmoothed[number],frame.size().width - maxX,frame.size().height - maxY);
-    outputFrame = frame(rect);
+void Stabilizer::resizeVideo(cv::VideoCapture cap){
+    cv::Mat frame;
+    cap >> frame;
+    int k, number = 0;
+    while (true)
+    {
+        cv::Mat result(frame.size().height+200,frame.size().width + 200,CV_8UC3);
+        cap >> frame;
+        if(frame.empty())
+            break;
+        cv::Rect rect(int(maxX + (xsmoothed[number] - xshift[number])),int(maxY - (ysmoothed[number] + yshift[number])),frame.size().width,frame.size().height);
+        cv::Rect rectFrame(maxX,maxY,frame.size().width,frame.size().height);
+        frame.copyTo(result(rect));
+        cv::imshow("Video", frame);
+        cv::imshow("VideoNew", result(rectFrame));
+        k = cv::waitKey(1);
+        if(k == 27)
+            break;
+        number++;
+    }
 }
 
 
 void Stabilizer::caclMaxShifts(){
-    int x = 0,y = 0;
-    for (int i = 0 ; i < xsmoothed.size(); i++){
+    generateFinalShift();
+    float x = 0,y = 0;
+    for (int i = 0 ; i < xshift.size(); i++){
         if (abs(xsmoothed[i] - xshift[i]) > x){
             x = abs(xsmoothed[i] - xshift[i]);
         }
@@ -135,5 +165,5 @@ void Stabilizer::caclMaxShifts(){
             y = abs(ysmoothed[i] - yshift[i]);
         }
     }
-    maxX = x; maxY = y;
+    maxX = x + 30; maxY = y + 30;
 }
