@@ -112,10 +112,10 @@ void Stabilizer :: generateFinalShift()
         for(int j=-radius; j <= radius; j++)
         {
             xsum += xshift[i + j];
-            ysum += xshift[i + j];
+            ysum += yshift[i + j];
         }
         xsmoothed.push_back(xsum / (2 * radius + 1));
-        ysmoothed.push_back(xsum / (2 * radius + 1));    
+        ysmoothed.push_back(ysum / (2 * radius + 1));    
     }
 
     for(int i = xshift.size() - radius; i < xshift.size(); i++)
