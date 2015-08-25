@@ -45,6 +45,7 @@ int main( int argc, char** argv )
         if(k == 27)
             break;
     }
+    stab.generateFinalShift();
     stab.drawPlots();
 
     return 0;
