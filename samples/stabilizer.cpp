@@ -67,7 +67,7 @@ bool Stabilizer::track( const cv::Mat& frame)
     // Find median shift.
     cv::Point2f median_shift(shifts_x[s / 2], shifts_y[s / 2]);
 
-    printf("%.4f %.4f\n", median_shift.x, median_shift.y);
+    //printf("%.4f %.4f\n", median_shift.x, median_shift.y);
 
     xshift.push_back(median_shift.x);
     yshift.push_back(median_shift.y);
@@ -77,31 +77,42 @@ bool Stabilizer::track( const cv::Mat& frame)
 
 void Stabilizer :: generateFinalShift()
 {
-    double xsum = 0;
-    double ysum = 0;
-    double avg_x = 0;
-    double avg_y = 0;
-    int count = 0;
     int radius = 3;
-    for(int j=-radius; j <= radius; j++)
-    {
-        xsum =0; ysum =0;
-        for(int i=0; i < xshift.size(); i++)
-        {
-            if(i+j >= 0 && i+j < xshift.size())
-            {
-               xsum += xshift[i];
-               ysum += yshift[i];
-               count++;
-            }
-            
-            avg_x = xsum / count;
-            avg_y = ysum / count;
 
-        }
-        xsmoothed.push_back(avg_x);    
-        ysmoothed.push_back(avg_y);
+
+    for(int i = 1; i < xshift.size(); i ++)
+        xshift[i] += xshift[i - 1];
+    for(int i = 1; i < yshift.size(); i ++)
+        yshift[i] += yshift[i - 1];
+
+    
+    for(int i=0; i < radius; i++)
+    {
+        xsmoothed.push_back(xshift[i]);
+        ysmoothed.push_back(yshift[i]);
     }
+
+    for(int i=radius; i < xshift.size() - radius; i++)
+    {
+        double xsum = 0;
+        double ysum = 0;
+
+        for(int j=-radius; j <= radius; j++)
+        {
+            xsum += xshift[i + j];
+            ysum += xshift[i + j];
+        }
+        xsmoothed.push_back(xsum / (2 * radius + 1));
+        ysmoothed.push_back(xsum / (2 * radius + 1));    
+    }
+
+    for(int i = xshift.size() - radius; i < xshift.size(); i++)
+    {
+        xsmoothed.push_back(xshift[i]);
+        ysmoothed.push_back(yshift[i]);
+    }
+
+
 }
 
 void Stabilizer :: drawPlots()
