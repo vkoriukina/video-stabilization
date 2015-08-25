@@ -16,6 +16,18 @@ bool Stabilizer::init( const cv::Mat& frame)
 	return true;
 }
 
+namespace
+{
+    template<typename T>
+    T median(const std::vector<T>& x)
+    {
+        CV_Assert(!x.empty());
+        std::vector<T> y(x);
+        std::sort(y.begin(), y.end());
+        return y[y.size() / 2];
+    }
+}
+
 bool Stabilizer::track( const cv::Mat& frame)
 {
     cv::Mat previous_frame_gray;
@@ -34,17 +46,21 @@ bool Stabilizer::track( const cv::Mat& frame)
     std::vector<float> error;
     cv::calcOpticalFlowPyrLK(prevFrame, frame, previousFeatures, currentFeatures, state, error);
 
-    std::sort(error.begin(), error.end());
-    double median_err = error[error.size()/2];
+    float median_error = median<float>(error);
+    /*std::vector<float>sorted_err(error); 
+    std::sort(sorted_err.begin(), sorted_err.end());
+    float median_error = sorted_err[sorted_err.size()/2];*/
+
     std::vector<cv::Point2f> good_points;
     std::vector<cv::Point2f> curr_points;
-
     for (size_t i = 0; i < n; ++i)
-        if ((state[i])&&(error[i]<=median_err))
+    {
+        if (state[i] && (error[i] <= median_error))
         {
             good_points.push_back(previousFeatures[i]);
             curr_points.push_back(currentFeatures[i]);
         }
+    }
 
 
     size_t s = good_points.size();
