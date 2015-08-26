@@ -12,10 +12,10 @@ using namespace std;
 bool Stabilizer::init( const cv::Mat& frame)
 {
     prevFrame = frame.clone();
-    cv::Mat gray4cor;
-    cv::cvtColor(frame, gray4cor, cv::COLOR_BGR2GRAY);
+    cv::Mat previous_frame_gray;
+    cv::cvtColor(frame, previous_frame_gray, cv::COLOR_BGR2GRAY);
    
-    cv::goodFeaturesToTrack(gray4cor, previousFeatures, 500, 0.1, 5);
+    cv::goodFeaturesToTrack(previous_frame_gray, previousFeatures, 500, 0.1, 5);
 
 	return true;
 }
@@ -32,12 +32,67 @@ namespace
     }
 }
 
-bool Stabilizer::track( const cv::Mat& frame)
+bool Stabilizer::track(const cv::Mat& frame)
 {
-    cv::Mat gray4cor;
-    cv::cvtColor(prevFrame, gray4cor, cv::COLOR_BGR2GRAY);
-   
-    cv::goodFeaturesToTrack(gray4cor, previousFeatures, 500, 0.01, 5);
+    cv::Mat previous_frame_gray;
+    cv::cvtColor(prevFrame, previous_frame_gray, cv::COLOR_BGR2GRAY);
+  
+    cv::goodFeaturesToTrack(previous_frame_gray, previousFeatures, 500, 0.01, 5);
+
+    size_t n = previousFeatures.size();
+    CV_Assert(n);
+    
+    // Compute optical flow in selected points.
+    std::vector<cv::Point2f> currentFeatures;
+    std::vector<uchar> state;
+    std::vector<float> error;
+    cv::calcOpticalFlowPyrLK(prevFrame, frame, previousFeatures, currentFeatures, state, error);
+
+    float median_error = median<float>(error);
+
+    std::vector<cv::Point2f> good_points;
+    std::vector<cv::Point2f> curr_points;
+    for (size_t i = 0; i < n; ++i)
+    {
+        if (state[i] && (error[i] <= median_error))
+        {
+            good_points.push_back(previousFeatures[i]);
+            curr_points.push_back(currentFeatures[i]);
+        }
+    }
+
+    size_t s = good_points.size();
+    CV_Assert(s == curr_points.size());
+
+    // Find points shift.
+    std::vector<float> shifts_x(s);
+    std::vector<float> shifts_y(s);
+    
+    for (size_t i = 0; i < s; ++i)
+    {
+        shifts_x[i] = curr_points[i].x - good_points[i].x;
+        shifts_y[i] = curr_points[i].y - good_points[i].y;
+    }
+    
+    std::sort(shifts_x.begin(), shifts_x.end());
+    std::sort(shifts_y.begin(), shifts_y.end());
+
+    // Find median shift.
+    cv::Point2f median_shift(shifts_x[s / 2], shifts_y[s / 2]);
+    xshift.push_back(median_shift.x);
+    yshift.push_back(median_shift.y);
+
+    prevFrame = frame.clone(); 
+    return true;
+}
+
+
+bool Stabilizer::forward_backward_track(const cv::Mat& frame)
+{
+    cv::Mat previous_frame_gray;
+    cv::cvtColor(prevFrame, previous_frame_gray, cv::COLOR_BGR2GRAY);
+  
+    cv::goodFeaturesToTrack(previous_frame_gray, previousFeatures, 500, 0.01, 5);
 
     size_t n = previousFeatures.size();
     CV_Assert(n);
@@ -64,13 +119,37 @@ bool Stabilizer::track( const cv::Mat& frame)
     size_t s = good_points.size();
     CV_Assert(s == curr_points.size());
     
+    //Compute backward optical flow
+    std::vector<cv::Point2f> backwardPoints;
+    std::vector<uchar> backState;
+    std::vector<float> backError;
+
+    cv::calcOpticalFlowPyrLK(frame, prevFrame, curr_points, backwardPoints, backState, backError);
+    float median_back_error = median<float>(backError);
+
+    CV_Assert(s == backwardPoints.size());
+    std::vector<float> diff(s);
+
+    for (size_t i = 0; i < s; ++i)
+    {
+        diff[i] = (good_points[i].x - backwardPoints[i].x) * (good_points[i].x - backwardPoints[i].x) + (good_points[i].y - backwardPoints[i].y) * (good_points[i].y - backwardPoints[i].y);
+    }
+
+    for (int i = s - 1; i >= 0; --i)
+    {
+        if (!backState[i] || (backError[i] <= median_back_error) || (diff[i] > 20))
+        {
+            good_points.erase(good_points.begin() + i);
+            curr_points.erase(curr_points.begin() + i);
+        }
+    }
+
+    s = good_points.size();
 
     // Find points shift.
     std::vector<float> shifts_x(s);
     std::vector<float> shifts_y(s);
-
     
-
     for (size_t i = 0; i < s; ++i)
     {
         shifts_x[i] = curr_points[i].x - good_points[i].x;
@@ -79,14 +158,13 @@ bool Stabilizer::track( const cv::Mat& frame)
     
     std::sort(shifts_x.begin(), shifts_x.end());
     std::sort(shifts_y.begin(), shifts_y.end());
-    //printf("%d\n", s);
+
     // Find median shift.
     cv::Point2f median_shift(shifts_x[s / 2], shifts_y[s / 2]);
     xshift.push_back(median_shift.x);
     yshift.push_back(median_shift.y);
 
-    prevFrame = frame.clone();
-    
+    prevFrame = frame.clone(); 
     return true;
 }
 
@@ -148,6 +226,43 @@ void Stabilizer::resizeVideo(cv::VideoCapture cap){
         if(k == 27)
             break;
         number++;
+    }
+}
+
+void Stabilizer::saveStabedVideo(const std::string& in_file, const std::string& out_file) const {
+    cv::VideoCapture video_reader(in_file);
+    CV_Assert(video_reader.isOpened());
+    cv::Mat frame;
+    video_reader >> frame;
+    CV_Assert(!frame.empty());
+
+    int fourcc_code = CV_FOURCC('X', 'V', 'I', 'D');
+    cv::VideoWriter video_writer(out_file, fourcc_code, 30.0, frame.size());
+    
+    int number = 0;
+    while (true)
+    {
+        cv::Mat result(frame.rows * 3 / 2, frame.cols * 3 / 2, CV_8UC3);
+        std::cout << number << " / " << xsmoothed.size() << std::endl;
+        if (number < xsmoothed.size()) {
+            break;
+        }
+        CV_Assert(number < xsmoothed.size());
+        CV_Assert(number < xshift.size());
+        CV_Assert(number < ysmoothed.size());
+        CV_Assert(number < yshift.size());
+        cv::Rect rect(int(maxX + (xsmoothed[number] - xshift[number])), int(maxY + (ysmoothed[number] - yshift[number])), frame.cols, frame.rows);
+        cv::Rect rectFrame(cv::Point(maxX, maxY), frame.size());
+        frame.copyTo(result(rect));
+
+        video_writer << result(rectFrame);
+        imshow("xxx", result(rectFrame));
+        cv::waitKey(1);
+        video_reader >> frame;
+        if (frame.empty()) {
+            break;
+        }
+        ++number;
     }
 }
 

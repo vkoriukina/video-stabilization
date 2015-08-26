@@ -22,10 +22,13 @@ int main( int argc, char** argv )
     }
 
     cv::Mat frame;   
+    cv::Mat newframe; 
     cap >> frame;
+    cap >> newframe;
 
-    Stabilizer stab;
-    stab.init(frame);
+    Stabilizer stab1, stab2;
+    stab1.init(frame);
+    stab2.init(newframe);
 
 
     char k = 0;
@@ -33,25 +36,46 @@ int main( int argc, char** argv )
     while (true)
     {
 
-        stab.track(frame);
-
-        cap >> frame;
-        if(frame.empty())
-            break;
-
+        stab1.track(frame);
+        stab2.forward_backward_track(frame);
         cv::imshow("Video", frame);
         k = cv::waitKey(1);
 
-        if(k == 27)
+        cap >> frame;
+        if (frame.empty() || k == 27) {
             break;
+        }
     }
 
-    cv::VideoCapture cap2;
-    cap2.open( video_file );
-    stab.caclMaxShifts();
-    stab.resizeVideo(cap2);
+    std::cout << "1111" << std::endl;
+    
+    stab1.caclMaxShifts();
+    stab1.saveStabedVideo(video_file, "forward_stab.avi");
+    stab1.responce();
 
-    stab.responce();
+    stab2.caclMaxShifts();
+    stab2.saveStabedVideo(video_file, "forward_backward_stab.avi");
+    stab2.responce();
+
+    std::cout << "2222" << std::endl;
+
+    {
+        cv::VideoCapture cap1("forward_stab.avi");
+        CV_Assert(cap1.isOpened());
+        cv::Mat frame1;
+        cap1 >> frame1;
+        
+        cv::VideoCapture cap2("forward_backward_stab.avi");
+        CV_Assert(cap2.isOpened());
+        cv::Mat frame2;
+        cap2 >> frame2;
+
+        while (!frame1.empty() && !frame2.empty()) {
+            imshow("forward_stab", frame1);
+            imshow("forward_backward_stab", frame2);
+            cv::waitKey(10);
+        }
+    }
 
     return 0;
 }
