@@ -21,4 +21,5 @@ class Stabilizer
     std::vector<cv::Point2f> previousFeatures;
     int maxX, maxY;
     int maxUp, maxLeft,maxRight, maxDown;
+    bool flagUpdateFeatures;
 };

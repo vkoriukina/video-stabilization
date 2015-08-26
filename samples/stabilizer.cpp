@@ -16,6 +16,7 @@ bool Stabilizer::init( const cv::Mat& frame)
     cv::cvtColor(frame, gray4cor, cv::COLOR_BGR2GRAY);
    
     cv::goodFeaturesToTrack(gray4cor, previousFeatures, 500, 0.1, 5);
+    flagUpdateFeatures = false;
 
 	return true;
 }
@@ -40,7 +41,10 @@ bool Stabilizer::track( const cv::Mat& frame)
     size_t n = previousFeatures.size();
     CV_Assert(n);
    
-    cv::goodFeaturesToTrack(gray4cor, previousFeatures, 500, 0.01, 5);
+    if (flagUpdateFeatures) {
+        cv::goodFeaturesToTrack(gray4cor, previousFeatures, 500, 0.01, 5);
+        flagUpdateFeatures = false;
+    }
    
     // Compute optical flow in selected points.
     std::vector<cv::Point2f> currentFeatures;
@@ -86,10 +90,11 @@ bool Stabilizer::track( const cv::Mat& frame)
     xshift.push_back(median_shift.x);
     yshift.push_back(median_shift.y);
 
-    /*if (flag) {
+    if (s < 100) {
         previousFeatures.clear();
         previousFeatures = currentFeatures;
-    }*/
+        flagUpdateFeatures = true;
+    }
 
     prevFrame = frame.clone();
     
