@@ -1,9 +1,14 @@
 #include "stabilizer.hpp"
 #include <cmath>
+#include "opencv2/core/core.hpp"
 #include "opencv2/highgui/highgui.hpp"
 #include "opencv2/imgproc/imgproc.hpp"
 #include "opencv2/video/video.hpp"
+#include <fstream>
 
+#include <iostream>
+
+using namespace std;
 
 bool Stabilizer::init( const cv::Mat& frame)
 {
@@ -11,20 +16,30 @@ bool Stabilizer::init( const cv::Mat& frame)
     cv::Mat gray4cor;
     cv::cvtColor(frame, gray4cor, cv::COLOR_BGR2GRAY);
    
-    cv::goodFeaturesToTrack(gray4cor, previousFeatures, 100, 0.1, 5);
+    cv::goodFeaturesToTrack(gray4cor, previousFeatures, 500, 0.1, 5);
 
 	return true;
 }
 
+namespace
+{
+    template<typename T>
+    T median(const std::vector<T>& x)
+    {
+        CV_Assert(!x.empty());
+        std::vector<T> y(x);
+        std::sort(y.begin(), y.end());
+        return y[y.size() / 2];
+    }
+}
+
 bool Stabilizer::track( const cv::Mat& frame)
 {
-    cv::Mat previous_frame_gray;
-    const int m = 100;
-    const double qLevel = 0.1;
-    const double dist = 5.0;
+    cv::Mat gray4cor;
+    cv::cvtColor(prevFrame, gray4cor, cv::COLOR_BGR2GRAY);
+   
+    cv::goodFeaturesToTrack(gray4cor, previousFeatures, 500, 0.01, 5);
 
-    cvtColor(prevFrame, previous_frame_gray, cv::COLOR_BGR2GRAY);
-    cv::goodFeaturesToTrack(previous_frame_gray, previousFeatures, m, qLevel, dist);
     size_t n = previousFeatures.size();
     CV_Assert(n);
     
@@ -34,44 +49,44 @@ bool Stabilizer::track( const cv::Mat& frame)
     std::vector<float> error;
     cv::calcOpticalFlowPyrLK(prevFrame, frame, previousFeatures, currentFeatures, state, error);
 
-    std::sort(error.begin(), error.end());
-    double median_err = error[error.size()/2];
+    float median_error = median<float>(error);
+
     std::vector<cv::Point2f> good_points;
     std::vector<cv::Point2f> curr_points;
-
     for (size_t i = 0; i < n; ++i)
-        if ((state[i])&&(error[i]<=median_err))
+    {
+        if (state[i] && (error[i] <= median_error))
         {
             good_points.push_back(previousFeatures[i]);
             curr_points.push_back(currentFeatures[i]);
         }
-
+    }
 
     size_t s = good_points.size();
     CV_Assert(s == curr_points.size());
+    
 
     // Find points shift.
-    std::vector<float> shifts_x(n);
-    std::vector<float> shifts_y(n);
+    std::vector<float> shifts_x(s);
+    std::vector<float> shifts_y(s);
+
+    
 
     for (size_t i = 0; i < s; ++i)
     {
         shifts_x[i] = curr_points[i].x - good_points[i].x;
         shifts_y[i] = curr_points[i].y - good_points[i].y;
     }
-
+    
     std::sort(shifts_x.begin(), shifts_x.end());
     std::sort(shifts_y.begin(), shifts_y.end());
-    
+    printf("%d\n", s);
     // Find median shift.
     cv::Point2f median_shift(shifts_x[s / 2], shifts_y[s / 2]);
 
-
-    if(median_shift.y > 0)
-        printf("%.4f %.4f\n", median_shift.x, median_shift.y);
-
     xshift.push_back(median_shift.x);
     yshift.push_back(median_shift.y);
+
     prevFrame = frame.clone();
 
     return true;
@@ -79,8 +94,7 @@ bool Stabilizer::track( const cv::Mat& frame)
 
 void Stabilizer :: generateFinalShift()
 {
-    int radius = 13;
-
+    int radius = 30;
 
     for(int i = 1; i < xshift.size(); i ++)
         xshift[i] += xshift[i - 1];
@@ -102,10 +116,10 @@ void Stabilizer :: generateFinalShift()
         for(int j=-radius; j <= radius; j++)
         {
             xsum += xshift[i + j];
-            ysum += xshift[i + j];
+            ysum += yshift[i + j];
         }
         xsmoothed.push_back(xsum / (2 * radius + 1));
-        ysmoothed.push_back(xsum / (2 * radius + 1));    
+        ysmoothed.push_back(ysum / (2 * radius + 1));    
     }
 
     for(int i = xshift.size() - radius; i < xshift.size(); i++)
@@ -114,48 +128,165 @@ void Stabilizer :: generateFinalShift()
         ysmoothed.push_back(yshift[i]);
     }
 
-
 }
 
-void Stabilizer :: drawPlots()
+
+void Stabilizer :: onlineProsessing(cv::VideoCapture cap)
 {
-    int plotWidth = 200; 
-    int plotHeight = 200; 
+    char key = 0;
+    int i = 0;
+    NumberOfPrevFames = 6;
+    cv::Mat frame;
 
-    std::vector<cv::Point> plot; 
+    cap >> prevFrame;
 
-    //for(int i=0; i < xshift.size(); i++)
-    //{
-    //    plot.push_back(cv::Point(i,xsmoothed[i]));
-    //}
-    cv::Mat img;
-
-    for(unsigned int i=1; i<xshift.size(); ++i)
+    while(true)
     {
+        cap >> frame;
+        if(frame.empty())
+            break;
+        if(key == 27)
+            break;
 
-        cv::Point2f p1; p1.x = i-1; p1.y = plot[i-1].x;
-        cv::Point2f p2; p2.x = i;   p2.y = plot[i].x;
-        cv::line(img, p1, p2, 'r', 5, 8, 0);
+        track(frame);
+
+        if(i != 0)
+        {
+            xshift[i] += xshift[i - 1];
+            yshift[i] += yshift[i - 1];
+        }
+
+        if(i < NumberOfPrevFames)
+        {
+            xsmoothed.push_back(xshift[i]);
+            ysmoothed.push_back(yshift[i]);
+        }
+        else
+        {
+            smooth();
+        }
+
+        float dx = xsmoothed[i] - xshift[i];
+        float dy = ysmoothed[i] - yshift[i];
+
+        i++;
+
+        cv::Mat show = smoothedImage(frame, dx ,dy);
+        cv::imshow("onlineStabilization", show);
+        key = cv::waitKey(1);
     }
 
-    //the image to be plotted 
-   // cv::Mat img = cv::Mat::zeros(plotHeight,plotWidth, CV_8UC3); 
+    /*char key = 0;
+    int i = 0;
+    NumberOfPrevFames = 30;
+    cv::Mat frame;
 
-    cv::namedWindow("Plot", CV_WINDOW_AUTOSIZE); 
-    cv::imshow("Plot", img); //display the image which is stored in the 'img' in the "MyWindow" window
-    cv::waitKey(0);
+    cap >> prevFrame;
+    cap >> prevFrame;
+
+    while(true)
+    {
+        cap >> frame;
+        if(frame.empty())
+            break;
+        if(key == 27)
+            break;
+
+        track(frame);
+
+        if(i != 0)
+        {
+            xshift[i] += xshift[i - 1];
+            yshift[i] += yshift[i - 1];
+        }
+
+        if(i < 2 * NumberOfPrevFames)
+        {
+            xsmoothed.push_back(xshift[i]);
+            ysmoothed.push_back(yshift[i]);
+        }
+        else
+        {
+            smooth(i - NumberOfPrevFames);
+
+
+            float dx = xsmoothed[i] - xshift[i];
+            float dy = ysmoothed[i] - yshift[i];
+
+            cv::Mat show = smoothedImage(frame, dx ,dy);
+            cv::imshow("onlineStabilization", show);
+            key = cv::waitKey(1);
+        }
+
+    i++;
+    }*/
+    
+}
+
+void Stabilizer :: smooth()
+{
+    int sumx = 0;
+    int sumy = 0;
+    int num = xshift.size();
+
+    sumx = (7 * xshift[num - 1] + 6 * xshift[num - 2] + 5 * xshift[num - 3] + 4 * xshift[num - 4] + 3 * xshift[num - 5] + 2 * xshift[num - 6] + 1 * xshift[num - 7]) / 28;
+    sumy = (7 * yshift[num - 1] + 6 * yshift[num - 2] + 5 * yshift[num - 3] + 4 * yshift[num - 4] + 3 * yshift[num - 5] + 2 * yshift[num - 6] + 1 * yshift[num - 7]) / 28;
+    xsmoothed.push_back(sumx);
+    ysmoothed.push_back(sumy);
+    /*for(int i = -NumberOfPrevFames; i <= NumberOfPrevFames; i++)
+    {
+        sumx += xshift[pos + i];
+        sumy += yshift[pos + i];
+    }
+    xsmoothed.push_back(sumx / (2 * NumberOfPrevFames + 1));
+    ysmoothed.push_back(sumy / (2 * NumberOfPrevFames + 1));*/
 
 }
 
-void Stabilizer::resizeVideo(const cv::Mat& frame, int number, cv::Mat& outputFrame){
-    cv::Rect rect(xsmoothed[number],ysmoothed[number],frame.size().width - maxX,frame.size().height - maxY);
-    outputFrame = frame(rect);
+
+cv::Mat Stabilizer::smoothedImage(cv::Mat frame, float dx, float dy)
+{
+    cv::Mat blackIm(frame.rows + 2 * abs(dy) + 10, frame.cols + 2 * abs(dx) + 10, 16);
+    blackIm.setTo(cv::Scalar(0, 0, 0));
+
+    cv::Rect pos(abs(dx) + 5, abs(dy) + 5, frame.cols, frame.rows);
+    frame.copyTo(blackIm(pos));
+
+    cv::Rect nPos(abs(dx) - dx + 5, abs(dy) - dy + 5, frame.cols, frame.rows);
+
+    return blackIm(nPos);
+
+
+
+}
+
+void Stabilizer::resizeVideo(cv::VideoCapture cap){
+    cv::Mat frame;
+    cap >> frame;
+    int k, number = 0;
+    while (true)
+    {
+        cv::Mat result(frame.size().height+200,frame.size().width + 200,CV_8UC3);
+        cap >> frame;
+        if(frame.empty())
+            break;
+        cv::Rect rect(int(maxX + (xsmoothed[number] - xshift[number])),int(maxY + (ysmoothed[number] - yshift[number])),frame.size().width,frame.size().height);
+        cv::Rect rectFrame(maxX,maxY,frame.size().width,frame.size().height);
+        frame.copyTo(result(rect));
+        cv::imshow("Video", frame);
+        cv::imshow("VideoNew", result(rectFrame));
+        k = cv::waitKey(1);
+        if(k == 27)
+            break;
+        number++;
+    }
 }
 
 
 void Stabilizer::caclMaxShifts(){
-    int x = 0,y = 0;
-    for (int i = 0 ; i < xsmoothed.size(); i++){
+    generateFinalShift();
+    float x = 0,y = 0;
+    for (int i = 0 ; i < xshift.size(); i++){
         if (abs(xsmoothed[i] - xshift[i]) > x){
             x = abs(xsmoothed[i] - xshift[i]);
         }
@@ -163,5 +294,16 @@ void Stabilizer::caclMaxShifts(){
             y = abs(ysmoothed[i] - yshift[i]);
         }
     }
-    maxX = x; maxY = y;
+    maxX = x + 30; maxY = y + 30;
 }
+
+
+void Stabilizer::responce(){
+    ofstream out_trajectory("trajectory.txt");
+    ofstream out_smoothed_trajectory("smoothed_trajectory.txt");
+    for (int i = 0 ; i < xshift.size(); i++) {
+        out_trajectory << xshift[i] << " " << yshift[i] << endl; 
+        out_smoothed_trajectory << xsmoothed[i] << " " << ysmoothed[i] << endl; 
+    }
+}
+
