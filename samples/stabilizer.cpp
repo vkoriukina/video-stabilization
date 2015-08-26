@@ -133,14 +133,16 @@ void Stabilizer::resizeVideo(cv::VideoCapture cap){
     cv::Mat frame;
     cap >> frame;
     int k, number = 0;
+    cv::Mat result(1.5*frame.size().height,1.5*frame.size().width,CV_8UC3);
     while (true)
     {
-        cv::Mat result(1.5*frame.size().height,1.5*frame.size().width,CV_8UC3);
+        
         cap >> frame;
         if(frame.empty())
             break;
         cv::Rect rect(int(maxX + (xsmoothed[number] - xshift[number])),int(maxY + (ysmoothed[number] - yshift[number])),frame.size().width,frame.size().height);
         cv::Rect rectFrame(maxX,maxY,frame.size().width,frame.size().height);
+        //cv::Rect rectFrame(2*maxX,2*maxY,frame.size().width - 2*maxX,frame.size().height - 2*maxY);// crop video
         frame.copyTo(result(rect));
         cv::imshow("Video", frame);
         cv::imshow("VideoNew", result(rectFrame));
@@ -151,6 +153,10 @@ void Stabilizer::resizeVideo(cv::VideoCapture cap){
     }
 }
 
+void Stabilizer::cropVideo(cv::Rect &r)
+{
+    cv::Rect cropFrame(2*maxX,2*maxY,r.size().width - 2*maxX,r.size().height - 2*maxY);
+}
 
 void Stabilizer::caclMaxShifts(){
     generateFinalShift();
