@@ -36,16 +36,21 @@ bool Stabilizer::track( const cv::Mat& frame)
 {
     cv::Mat gray4cor;
     cv::cvtColor(prevFrame, gray4cor, cv::COLOR_BGR2GRAY);
-   
-    cv::goodFeaturesToTrack(gray4cor, previousFeatures, 500, 0.01, 5);
 
     size_t n = previousFeatures.size();
     CV_Assert(n);
-    
+   
+    bool flag = true;
+    //if (n < 500) {
+        cv::goodFeaturesToTrack(gray4cor, previousFeatures, 500, 0.01, 5);
+        flag = false;
+    //}
+   
     // Compute optical flow in selected points.
     std::vector<cv::Point2f> currentFeatures;
     std::vector<uchar> state;
     std::vector<float> error;
+
     cv::calcOpticalFlowPyrLK(prevFrame, frame, previousFeatures, currentFeatures, state, error);
 
     float median_error = median<float>(error);
@@ -79,11 +84,15 @@ bool Stabilizer::track( const cv::Mat& frame)
     
     std::sort(shifts_x.begin(), shifts_x.end());
     std::sort(shifts_y.begin(), shifts_y.end());
-    printf("%d\n", s);
+
     // Find median shift.
     cv::Point2f median_shift(shifts_x[s / 2], shifts_y[s / 2]);
     xshift.push_back(median_shift.x);
     yshift.push_back(median_shift.y);
+
+    if (flag) {
+        //previousFeatures = currentFeatures;
+    }
 
     prevFrame = frame.clone();
     
