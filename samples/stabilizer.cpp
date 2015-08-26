@@ -164,11 +164,6 @@ void Stabilizer::resizeVideo(cv::VideoCapture cap){
     }
 }
 
-void Stabilizer::cropVideo(cv::Rect &r)
-{
-    cv::Rect cropFrame(2*maxX,2*maxY,r.size().width - 2*maxX,r.size().height - 2*maxY);
-}
-
 void Stabilizer::caclMaxShifts(){
     generateFinalShift();
     float x = 0,y = 0;
