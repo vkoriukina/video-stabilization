@@ -40,11 +40,7 @@ bool Stabilizer::track( const cv::Mat& frame)
     size_t n = previousFeatures.size();
     CV_Assert(n);
    
-    bool flag = true;
-    //if (n < 500) {
-        cv::goodFeaturesToTrack(gray4cor, previousFeatures, 500, 0.01, 5);
-        flag = false;
-    //}
+    cv::goodFeaturesToTrack(gray4cor, previousFeatures, 500, 0.01, 5);
    
     // Compute optical flow in selected points.
     std::vector<cv::Point2f> currentFeatures;
@@ -90,9 +86,10 @@ bool Stabilizer::track( const cv::Mat& frame)
     xshift.push_back(median_shift.x);
     yshift.push_back(median_shift.y);
 
-    if (flag) {
-        //previousFeatures = currentFeatures;
-    }
+    /*if (flag) {
+        previousFeatures.clear();
+        previousFeatures = currentFeatures;
+    }*/
 
     prevFrame = frame.clone();
     
@@ -144,7 +141,7 @@ void Stabilizer::resizeVideo(cv::VideoCapture cap){
     int k, number = 0;
     while (true)
     {
-        cv::Mat result(frame.size().height+200,frame.size().width + 200,CV_8UC3);
+        cv::Mat result(1.5*frame.size().height,1.5*frame.size().width,CV_8UC3);
         cap >> frame;
         if(frame.empty())
             break;
@@ -153,7 +150,7 @@ void Stabilizer::resizeVideo(cv::VideoCapture cap){
         frame.copyTo(result(rect));
         cv::imshow("Video", frame);
         cv::imshow("VideoNew", result(rectFrame));
-        k = cv::waitKey(1);
+        k = cv::waitKey(25);
         if(k == 27)
             break;
         number++;
@@ -172,7 +169,7 @@ void Stabilizer::caclMaxShifts(){
             y = abs(ysmoothed[i] - yshift[i]);
         }
     }
-    maxX = x + 30; maxY = y + 30;
+    maxX = x; maxY = y;
 }
 
 
