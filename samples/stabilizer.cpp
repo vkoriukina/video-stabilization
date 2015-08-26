@@ -164,6 +164,7 @@ void Stabilizer::resizeVideo(cv::VideoCapture cap){
     }
 }
 
+
 void Stabilizer::caclMaxShifts(){
     generateFinalShift();
     float x = 0,y = 0;
