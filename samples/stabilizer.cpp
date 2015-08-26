@@ -188,3 +188,132 @@ void Stabilizer::responce(){
         out_Ytrajectories << yshift[i] << " " <<  ysmoothed[i] << endl;
     }
 }
+
+void Stabilizer :: onlineProsessing(cv::VideoCapture cap)
+{
+    char key = 0;
+    int i = 0;
+    NumberOfPrevFames = 6;
+    cv::Mat frame;
+
+    cap >> prevFrame;
+
+    while(true)
+    {
+        cap >> frame;
+        if(frame.empty())
+            break;
+        if(key == 27)
+            break;
+
+        track(frame);
+
+        if(i != 0)
+        {
+            xshift[i] += xshift[i - 1];
+            yshift[i] += yshift[i - 1];
+        }
+
+        if(i < NumberOfPrevFames)
+        {
+            xsmoothed.push_back(xshift[i]);
+            ysmoothed.push_back(yshift[i]);
+        }
+        else
+        {
+            smooth();
+        }
+
+        float dx = xsmoothed[i] - xshift[i];
+        float dy = ysmoothed[i] - yshift[i];
+
+        i++;
+
+        cv::Mat show = smoothedImage(frame, dx ,dy);
+        cv::imshow("onlineStabilization", show);
+        key = cv::waitKey(1);
+    }
+
+    /*char key = 0;
+    int i = 0;
+    NumberOfPrevFames = 30;
+    cv::Mat frame;
+
+    cap >> prevFrame;
+    cap >> prevFrame;
+
+    while(true)
+    {
+        cap >> frame;
+        if(frame.empty())
+            break;
+        if(key == 27)
+            break;
+
+        track(frame);
+
+        if(i != 0)
+        {
+            xshift[i] += xshift[i - 1];
+            yshift[i] += yshift[i - 1];
+        }
+
+        if(i < 2 * NumberOfPrevFames)
+        {
+            xsmoothed.push_back(xshift[i]);
+            ysmoothed.push_back(yshift[i]);
+        }
+        else
+        {
+            smooth(i - NumberOfPrevFames);
+
+
+            float dx = xsmoothed[i] - xshift[i];
+            float dy = ysmoothed[i] - yshift[i];
+
+            cv::Mat show = smoothedImage(frame, dx ,dy);
+            cv::imshow("onlineStabilization", show);
+            key = cv::waitKey(1);
+        }
+
+    i++;
+    }*/
+    
+}
+
+void Stabilizer :: smooth()
+{
+    int sumx = 0;
+    int sumy = 0;
+    int num = xshift.size();
+
+    sumx = (7 * xshift[num - 1] + 6 * xshift[num - 2] + 5 * xshift[num - 3] + 4 * xshift[num - 4] + 3 * xshift[num - 5] + 2 * xshift[num - 6] + 1 * xshift[num - 7]) / 28;
+    sumy = (7 * yshift[num - 1] + 6 * yshift[num - 2] + 5 * yshift[num - 3] + 4 * yshift[num - 4] + 3 * yshift[num - 5] + 2 * yshift[num - 6] + 1 * yshift[num - 7]) / 28;
+    xsmoothed.push_back(sumx);
+    ysmoothed.push_back(sumy);
+    /*for(int i = -NumberOfPrevFames; i <= NumberOfPrevFames; i++)
+    {
+        sumx += xshift[pos + i];
+        sumy += yshift[pos + i];
+    }
+    xsmoothed.push_back(sumx / (2 * NumberOfPrevFames + 1));
+    ysmoothed.push_back(sumy / (2 * NumberOfPrevFames + 1));*/
+
+}
+
+
+cv::Mat Stabilizer::smoothedImage(cv::Mat frame, float dx, float dy)
+{
+    cv::Mat blackIm(frame.rows + 2 * abs(dy) + 10, frame.cols + 2 * abs(dx) + 10, 16);
+    blackIm.setTo(cv::Scalar(0, 0, 0));
+
+    cv::Rect pos(abs(dx) + 5, abs(dy) + 5, frame.cols, frame.rows);
+    frame.copyTo(blackIm(pos));
+
+    cv::Rect nPos(abs(dx) - dx + 5, abs(dy) - dy + 5, frame.cols, frame.rows);
+
+    return blackIm(nPos);
+
+
+
+}
