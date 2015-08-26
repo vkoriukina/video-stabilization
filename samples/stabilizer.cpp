@@ -79,7 +79,7 @@ bool Stabilizer::track( const cv::Mat& frame)
     
     std::sort(shifts_x.begin(), shifts_x.end());
     std::sort(shifts_y.begin(), shifts_y.end());
-    printf("%d\n", s);
+    //printf("%d\n", s);
     // Find median shift.
     cv::Point2f median_shift(shifts_x[s / 2], shifts_y[s / 2]);
     xshift.push_back(median_shift.x);
@@ -135,7 +135,7 @@ void Stabilizer::resizeVideo(cv::VideoCapture cap){
     int k, number = 0;
     while (true)
     {
-        cv::Mat result(frame.size().height+200,frame.size().width + 200,CV_8UC3);
+        cv::Mat result(1.5*frame.size().height,1.5*frame.size().width,CV_8UC3);
         cap >> frame;
         if(frame.empty())
             break;
@@ -144,7 +144,7 @@ void Stabilizer::resizeVideo(cv::VideoCapture cap){
         frame.copyTo(result(rect));
         cv::imshow("Video", frame);
         cv::imshow("VideoNew", result(rectFrame));
-        k = cv::waitKey(1);
+        k = cv::waitKey(25);
         if(k == 27)
             break;
         number++;
@@ -163,7 +163,7 @@ void Stabilizer::caclMaxShifts(){
             y = abs(ysmoothed[i] - yshift[i]);
         }
     }
-    maxX = x + 30; maxY = y + 30;
+    maxX = x; maxY = y;
 }
 
 
