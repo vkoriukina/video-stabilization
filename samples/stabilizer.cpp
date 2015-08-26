@@ -165,7 +165,7 @@ void Stabilizer::resizeVideo(cv::VideoCapture cap){
 }
 
 
-void Stabilizer::caclMaxShifts(){
+void Stabilizer::calcMaxShifts(){
     generateFinalShift();
     float x = 0,y = 0;
     for (int i = 0 ; i < xshift.size(); i++){
@@ -238,10 +238,8 @@ void Stabilizer :: onlineProsessing(cv::VideoCapture cap)
     int i = 0;
     NumberOfPrevFames = 30;
     cv::Mat frame;
-
     cap >> prevFrame;
     cap >> prevFrame;
-
     while(true)
     {
         cap >> frame;
@@ -249,15 +247,12 @@ void Stabilizer :: onlineProsessing(cv::VideoCapture cap)
             break;
         if(key == 27)
             break;
-
         track(frame);
-
         if(i != 0)
         {
             xshift[i] += xshift[i - 1];
             yshift[i] += yshift[i - 1];
         }
-
         if(i < 2 * NumberOfPrevFames)
         {
             xsmoothed.push_back(xshift[i]);
@@ -266,16 +261,12 @@ void Stabilizer :: onlineProsessing(cv::VideoCapture cap)
         else
         {
             smooth(i - NumberOfPrevFames);
-
-
             float dx = xsmoothed[i] - xshift[i];
             float dy = ysmoothed[i] - yshift[i];
-
             cv::Mat show = smoothedImage(frame, dx ,dy);
             cv::imshow("onlineStabilization", show);
             key = cv::waitKey(1);
         }
-
     i++;
     }*/
     

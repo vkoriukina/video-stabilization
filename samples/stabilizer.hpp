@@ -16,7 +16,7 @@ class Stabilizer
     void onlineProsessing(cv::VideoCapture cap);
     void smooth();
     cv::Mat smoothedImage(cv::Mat frame, float dx, float dy);
-    void caclMaxShifts();
+    void calcMaxShifts();
     void responce();
 
     cv::Mat prevFrame;

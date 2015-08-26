@@ -2,6 +2,7 @@
 #include "opencv2\highgui\highgui.hpp"
 #include <iostream>
 #include <string>
+#include <time.h>
 
 const char* params =
      "{   | video    |       | video file to stabilize                       }";
@@ -28,6 +29,9 @@ int main( int argc, char** argv )
     stab.init(frame);
 
     cap >> frame;
+    int k;
+    int time = clock();
+
     while (true)
     {
 
@@ -38,10 +42,22 @@ int main( int argc, char** argv )
             break;
 
         cv::imshow("Video", frame);
-        cv::waitKey(1);
+        k = cv::waitKey(1);
+        if (k == 27){
+            break;
+        }
+
+        std::cout << clock() - time << "\n";
+        time = clock();
+
     }
 
-    stab.caclMaxShifts();
+    stab.calcMaxShifts();
+    std::cout << clock() - time << "\n";
+
+    cv::VideoCapture cap2;
+    cap2.open( video_file );
+    stab.resizeVideo(cap2);
 
     return 0;
 }
