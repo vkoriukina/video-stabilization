@@ -25,4 +25,5 @@ class Stabilizer
     int maxX, maxY;
     int maxUp, maxLeft,maxRight, maxDown;
     int NumberOfPrevFames;
+    bool flagUpdateFeatures;
 };
