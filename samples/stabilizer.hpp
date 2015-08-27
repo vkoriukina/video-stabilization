@@ -28,4 +28,5 @@ class Stabilizer
     int maxUp, maxLeft,maxRight, maxDown;
     int Radius;
     bool flagUpdateFeatures;
+    cv::VideoWriter writeOutputVideo;
 };
