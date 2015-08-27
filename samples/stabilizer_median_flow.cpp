@@ -28,7 +28,7 @@ int main( int argc, char** argv )
     cap >> frame;
 
     Stabilizer stab;
-    stab.init(frame);
+    stab.init(frame, type);
 
     if (type == "offline")
     {
@@ -66,14 +66,14 @@ int main( int argc, char** argv )
 
     if (type == "online" )
     {
-        cv::VideoCapture cap2;
+        cv::VideoCapture cap2(video_file);
         cap2.open( video_file );
         stab.onlineProsessing(cap2);
     }
 
     if (type == "fast" )
     {
-        cv::VideoCapture cap2;
+        cv::VideoCapture cap2(video_file);
         cap2.open( video_file );
         stab.fastOfflineProsessing(cap2);
     }

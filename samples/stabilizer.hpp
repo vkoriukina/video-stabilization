@@ -9,7 +9,7 @@ class Stabilizer
  public:
     ~Stabilizer() {}
 
-    bool init( const cv::Mat& frame);
+    bool init( const cv::Mat& frame, std::string type);
     bool track( const cv::Mat& frame);
     void generateFinalShift();
     void resizeVideo(cv::VideoCapture cap);
@@ -28,4 +28,5 @@ class Stabilizer
     int maxUp, maxLeft,maxRight, maxDown;
     int Radius;
     bool flagUpdateFeatures;
+    cv::VideoWriter writeOutputVideo;
 };
