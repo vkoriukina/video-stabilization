@@ -1,11 +1,11 @@
 #include "stabilizer.hpp"
+
 #include <cmath>
-#include "opencv2/highgui/highgui.hpp"
-#include "opencv2/imgproc/imgproc.hpp"
-#include "opencv2/video/video.hpp"
+#include <iostream>
 #include <fstream>
 
-#include <iostream>
+#include "opencv2/imgproc/imgproc.hpp"
+#include "opencv2/video/video.hpp"
 
 using namespace std;
 
@@ -132,12 +132,13 @@ bool Stabilizer::forward_backward_track(const cv::Mat& frame)
 
     for (size_t i = 0; i < s; ++i)
     {
-        diff[i] = (good_points[i].x - backwardPoints[i].x) * (good_points[i].x - backwardPoints[i].x) + (good_points[i].y - backwardPoints[i].y) * (good_points[i].y - backwardPoints[i].y);
+        diff[i] = cv::norm(good_points[i] - backwardPoints[i]);
+        // diff[i] = (good_points[i].x - backwardPoints[i].x) * (good_points[i].x - backwardPoints[i].x) + (good_points[i].y - backwardPoints[i].y) * (good_points[i].y - backwardPoints[i].y);
     }
 
     for (int i = s - 1; i >= 0; --i)
     {
-        if (!backState[i] || (backError[i] <= median_back_error) || (diff[i] > 20))
+        if (!backState[i] || (backError[i] <= median_back_error) || (diff[i] > 400))
         {
             good_points.erase(good_points.begin() + i);
             curr_points.erase(curr_points.begin() + i);
@@ -156,11 +157,8 @@ bool Stabilizer::forward_backward_track(const cv::Mat& frame)
         shifts_y[i] = curr_points[i].y - good_points[i].y;
     }
     
-    std::sort(shifts_x.begin(), shifts_x.end());
-    std::sort(shifts_y.begin(), shifts_y.end());
-
     // Find median shift.
-    cv::Point2f median_shift(shifts_x[s / 2], shifts_y[s / 2]);
+    cv::Point2f median_shift(median<float>(shifts_x), median<float>(shifts_y));
     xshift.push_back(median_shift.x);
     yshift.push_back(median_shift.y);
 
@@ -229,6 +227,7 @@ void Stabilizer::resizeVideo(cv::VideoCapture cap){
     }
 }
 
+
 void Stabilizer::saveStabedVideo(const std::string& in_file, const std::string& out_file) const {
     cv::VideoCapture video_reader(in_file);
     CV_Assert(video_reader.isOpened());
@@ -242,24 +241,23 @@ void Stabilizer::saveStabedVideo(const std::string& in_file, const std::string& 
     int number = 0;
     while (true)
     {
-        cv::Mat result(frame.rows * 3 / 2, frame.cols * 3 / 2, CV_8UC3);
-        std::cout << number << " / " << xsmoothed.size() << std::endl;
-        if (number < xsmoothed.size()) {
-            break;
-        }
+        cv::Mat result(frame.size(), CV_8UC3);
         CV_Assert(number < xsmoothed.size());
         CV_Assert(number < xshift.size());
         CV_Assert(number < ysmoothed.size());
         CV_Assert(number < yshift.size());
-        cv::Rect rect(int(maxX + (xsmoothed[number] - xshift[number])), int(maxY + (ysmoothed[number] - yshift[number])), frame.cols, frame.rows);
-        cv::Rect rectFrame(cv::Point(maxX, maxY), frame.size());
-        frame.copyTo(result(rect));
-
-        video_writer << result(rectFrame);
-        imshow("xxx", result(rectFrame));
-        cv::waitKey(1);
+        // Shifted frame area.
+        cv::Rect roi(cv::Point(xsmoothed[number] - xshift[number], ysmoothed[number] - yshift[number]), frame.size());
+        // Region of the resulting image that is to be filled by the original one.
+        cv::Rect result_roi = roi & cv::Rect(cv::Point(), frame.size());
+        roi.x = -roi.x;
+        roi.y = -roi.y;
+        // Region of the original frame that is to be copied to the resulting one.
+        cv::Rect frame_roi = roi & cv::Rect(cv::Point(), frame.size());
+        frame(frame_roi).copyTo(result(result_roi));
+        video_writer << result;
         video_reader >> frame;
-        if (frame.empty()) {
+        if (frame.empty() || number + 1 == xshift.size()) {
             break;
         }
         ++number;

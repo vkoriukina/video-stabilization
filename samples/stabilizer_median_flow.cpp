@@ -47,8 +47,6 @@ int main( int argc, char** argv )
         }
     }
 
-    std::cout << "1111" << std::endl;
-    
     stab1.caclMaxShifts();
     stab1.saveStabedVideo(video_file, "forward_stab.avi");
     stab1.responce();
@@ -57,14 +55,12 @@ int main( int argc, char** argv )
     stab2.saveStabedVideo(video_file, "forward_backward_stab.avi");
     stab2.responce();
 
-    std::cout << "2222" << std::endl;
-
     {
         cv::VideoCapture cap1("forward_stab.avi");
         CV_Assert(cap1.isOpened());
         cv::Mat frame1;
         cap1 >> frame1;
-        
+
         cv::VideoCapture cap2("forward_backward_stab.avi");
         CV_Assert(cap2.isOpened());
         cv::Mat frame2;
@@ -73,7 +69,9 @@ int main( int argc, char** argv )
         while (!frame1.empty() && !frame2.empty()) {
             imshow("forward_stab", frame1);
             imshow("forward_backward_stab", frame2);
-            cv::waitKey(10);
+            cv::waitKey(25);
+            cap1 >> frame1;
+            cap2 >> frame2;
         }
     }
 
