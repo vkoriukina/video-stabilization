@@ -193,7 +193,8 @@ void Stabilizer :: onlineProsessing(cv::VideoCapture cap)
 {
     char key = 0;
     int i = 0;
-    NumberOfPrevFrames = 6;
+    int alfa = 0.5;
+    //NumberOfPrevFrames = 6;
     cv::Mat frame;
 
     cap >> prevFrame;
@@ -209,20 +210,19 @@ void Stabilizer :: onlineProsessing(cv::VideoCapture cap)
 
         track(frame);
 
-        if(i != 0)
-        {
-            xshift[i] += xshift[i - 1];
-            yshift[i] += yshift[i - 1];
-        }
 
-        if(i < NumberOfPrevFrames)
+
+        if(i == 0)
         {
             xsmoothed.push_back(xshift[i]);
             ysmoothed.push_back(yshift[i]);
         }
         else
         {
-            onlineSmooth();
+            xshift[i] += xshift[i - 1];
+            yshift[i] += yshift[i - 1];
+
+            onlineSmooth(i, alfa);
         }
 
         float dx = xsmoothed[i] - xshift[i];
@@ -236,16 +236,13 @@ void Stabilizer :: onlineProsessing(cv::VideoCapture cap)
     }
 }
 
-void Stabilizer :: onlineSmooth()
+void Stabilizer :: onlineSmooth(int num, float alfa)
 {
-    int sumx = 0;
-    int sumy = 0;
-    int num = xshift.size();
+    float solx = xsmoothed[num - 1] + alfa * (xshift[num] - xsmoothed[num - 1]);
+    float soly = ysmoothed[num - 1] + alfa * (yshift[num] - ysmoothed[num - 1]);
 
-    sumx = (7 * xshift[num - 1] + 6 * xshift[num - 2] + 5 * xshift[num - 3] + 4 * xshift[num - 4] + 3 * xshift[num - 5] + 2 * xshift[num - 6] + 1 * xshift[num - 7]) / 28;
-    sumy = (7 * yshift[num - 1] + 6 * yshift[num - 2] + 5 * yshift[num - 3] + 4 * yshift[num - 4] + 3 * yshift[num - 5] + 2 * yshift[num - 6] + 1 * yshift[num - 7]) / 28;
-    xsmoothed.push_back(sumx);
-    ysmoothed.push_back(sumy);
+    xsmoothed.push_back(solx);
+    ysmoothed.push_back(soly);
 }
 
 void Stabilizer :: fastOfflineProsessing(cv::VideoCapture cap)

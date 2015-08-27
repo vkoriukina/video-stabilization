@@ -16,7 +16,7 @@ class Stabilizer
     void onlineProsessing(cv::VideoCapture cap);
     void fastOfflineProsessing(cv::VideoCapture cap);
     void smooth(int pos);
-    void onlineSmooth();
+    void onlineSmooth(int num, float alfa);
     cv::Mat smoothedImage(cv::Mat frame, float dx, float dy);
     void calcMaxShifts();
     void responce();
@@ -27,6 +27,5 @@ class Stabilizer
     int maxX, maxY;
     int maxUp, maxLeft,maxRight, maxDown;
     int Radius;
-    int NumberOfPrevFrames;
     bool flagUpdateFeatures;
 };
