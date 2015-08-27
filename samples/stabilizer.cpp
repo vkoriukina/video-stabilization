@@ -157,7 +157,6 @@ void Stabilizer::resizeVideo(cv::VideoCapture cap){
         frame.copyTo(result(rect));
         cv::imshow("Video", frame);
         cv::imshow("VideoNew", result(rectFrame));
-        writeOutputVideo << (result(rectFrame));
 
         k = cv::waitKey(25);
         if(k == 27)
@@ -234,7 +233,6 @@ void Stabilizer :: onlineProsessing(cv::VideoCapture cap)
 
         cv::Mat show = smoothedImage(frame, dx ,dy);
         cv::imshow("onlineStabilization", show);
-        writeOutputVideo << show;
         key = cv::waitKey(1);
     }
 }
@@ -284,7 +282,6 @@ void Stabilizer :: fastOfflineProsessing(cv::VideoCapture cap)
             float dy = ysmoothed[i] - yshift[i];
             cv::Mat show = smoothedImage(frame, dx ,dy);
             cv::imshow("onlineStabilization", show);
-            writeOutputVideo << show;
             key = cv::waitKey(1);
         }
     i++;
