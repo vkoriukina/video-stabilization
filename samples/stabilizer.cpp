@@ -193,7 +193,7 @@ void Stabilizer :: onlineProsessing(cv::VideoCapture cap)
 {
     char key = 0;
     int i = 0;
-    int alfa = 0.01;
+    int alfa = 0.5;
     //NumberOfPrevFrames = 6;
     cv::Mat frame;
 
@@ -233,7 +233,7 @@ void Stabilizer :: onlineProsessing(cv::VideoCapture cap)
 
         cv::Mat show = smoothedImage(frame, dx ,dy);
         cv::imshow("onlineStabilization", show);
-        key = cv::waitKey(33);
+        key = cv::waitKey(1);
     }
 }
 
@@ -250,7 +250,7 @@ void Stabilizer :: fastOfflineProsessing(cv::VideoCapture cap)
 {
     char key = 0;
     int i = 0;
-    Radius = 4;
+    Radius = 30;
     cv::Mat frame;
     cap >> prevFrame;
     cap >> prevFrame;
