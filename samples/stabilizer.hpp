@@ -9,7 +9,7 @@ class Stabilizer
  public:
     ~Stabilizer() {}
 
-    bool init( const cv::Mat& frame, std::string type);
+    bool init( const cv::Mat& frame);
     bool track( const cv::Mat& frame);
     void generateFinalShift();
     void resizeVideo(cv::VideoCapture cap);

@@ -16,22 +16,27 @@ int main( int argc, char** argv )
     std::string type = parser.get<std::string>("type");
 
 
-    cv::VideoCapture cap;
-    cap.open( video_file );
-    if( !cap.isOpened() )
-    {
-        std::cout << "Error: could not initialize video capturing...\n";
-        return 1;
-    }
-
-    cv::Mat frame;   
-    cap >> frame;
+    
+  
 
     Stabilizer stab;
-    stab.init(frame, type);
+
 
     if (type == "offline")
     {
+        cv::VideoCapture cap;
+        cap.open( video_file );
+        if( !cap.isOpened() )
+        {
+            std::cout << "Error: could not initialize video capturing...\n";
+            return 1;
+        }
+
+        cv::Mat frame;   
+        cap >> frame;
+        
+        stab.init(frame);
+
         cap >> frame;
         int k;
         int time = clock();

@@ -9,7 +9,7 @@
 
 using namespace std;
 
-bool Stabilizer::init( const cv::Mat& frame, std::string type)
+bool Stabilizer::init( const cv::Mat& frame)
 {
     prevFrame = frame.clone();
     cv::Mat gray4cor;
@@ -17,8 +17,6 @@ bool Stabilizer::init( const cv::Mat& frame, std::string type)
    
     cv::goodFeaturesToTrack(gray4cor, previousFeatures, 500, 0.1, 5);
     flagUpdateFeatures = false;
-
-    writeOutputVideo = cv::VideoWriter("result_" + type + ".avi", CV_FOURCC('m', 'p', '4', 'v'), 25, cvSize(frame.cols,frame.rows), true);
 
 	return true;
 }
@@ -159,7 +157,6 @@ void Stabilizer::resizeVideo(cv::VideoCapture cap){
         frame.copyTo(result(rect));
         cv::imshow("Video", frame);
         cv::imshow("VideoNew", result(rectFrame));
-        writeOutputVideo << (result(rectFrame));
 
         k = cv::waitKey(25);
         if(k == 27)
@@ -197,12 +194,13 @@ void Stabilizer :: onlineProsessing(cv::VideoCapture cap)
 {
     char key = 0;
     int i = 0;
-    int alfa = 0.5;
+    float alfa = 0.25;
     //NumberOfPrevFrames = 6;
     cv::Mat frame;
 
     cap >> prevFrame;
-
+    cap >> prevFrame;
+    init(prevFrame);
     while(true)
     {
         cap >> frame;
@@ -235,7 +233,6 @@ void Stabilizer :: onlineProsessing(cv::VideoCapture cap)
 
         cv::Mat show = smoothedImage(frame, dx ,dy);
         cv::imshow("onlineStabilization", show);
-        writeOutputVideo << show;
         key = cv::waitKey(1);
     }
 }
@@ -256,7 +253,10 @@ void Stabilizer :: fastOfflineProsessing(cv::VideoCapture cap)
     Radius = 30;
     cv::Mat frame;
     cap >> prevFrame;
-
+    cap >> prevFrame;
+    //cv::Mat BlackScreen(prevFrame.cols + 2000, prevFrame.rows + 2000,  
+    init(prevFrame);
+    //cap >> prevFrame;
     while(true)
     {
         cap >> frame;
@@ -282,7 +282,6 @@ void Stabilizer :: fastOfflineProsessing(cv::VideoCapture cap)
             float dy = ysmoothed[i] - yshift[i];
             cv::Mat show = smoothedImage(frame, dx ,dy);
             cv::imshow("onlineStabilization", show);
-            writeOutputVideo << show;
             key = cv::waitKey(1);
         }
     i++;
