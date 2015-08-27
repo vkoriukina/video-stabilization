@@ -9,7 +9,7 @@
 
 using namespace std;
 
-bool Stabilizer::init( const cv::Mat& frame)
+bool Stabilizer::init( const cv::Mat& frame, std::string type)
 {
     prevFrame = frame.clone();
     cv::Mat gray4cor;
@@ -17,6 +17,8 @@ bool Stabilizer::init( const cv::Mat& frame)
    
     cv::goodFeaturesToTrack(gray4cor, previousFeatures, 500, 0.1, 5);
     flagUpdateFeatures = false;
+
+    writeOutputVideo = cv::VideoWriter("result_" + type + ".avi", CV_FOURCC('m', 'p', '4', 'v'), 25, cvSize(frame.cols,frame.rows), true);
 
 	return true;
 }
@@ -157,6 +159,8 @@ void Stabilizer::resizeVideo(cv::VideoCapture cap){
         frame.copyTo(result(rect));
         cv::imshow("Video", frame);
         cv::imshow("VideoNew", result(rectFrame));
+        writeOutputVideo << (result(rectFrame));
+
         k = cv::waitKey(25);
         if(k == 27)
             break;
@@ -197,7 +201,6 @@ void Stabilizer :: onlineProsessing(cv::VideoCapture cap)
     cv::Mat frame;
 
     cap >> prevFrame;
-    init(prevFrame);
 
     while(true)
     {
@@ -232,6 +235,7 @@ void Stabilizer :: onlineProsessing(cv::VideoCapture cap)
 
         cv::Mat show = smoothedImage(frame, dx ,dy);
         cv::imshow("onlineStabilization", show);
+        writeOutputVideo << show;
         key = cv::waitKey(1);
     }
 }
@@ -255,8 +259,7 @@ void Stabilizer :: fastOfflineProsessing(cv::VideoCapture cap)
     Radius = 30;
     cv::Mat frame;
     cap >> prevFrame;
-    init(prevFrame);
-    //cap >> prevFrame;
+
     while(true)
     {
         cap >> frame;
@@ -282,6 +285,7 @@ void Stabilizer :: fastOfflineProsessing(cv::VideoCapture cap)
             float dy = ysmoothed[i] - yshift[i];
             cv::Mat show = smoothedImage(frame, dx ,dy);
             cv::imshow("onlineStabilization", show);
+            writeOutputVideo << show;
             key = cv::waitKey(1);
         }
     i++;
@@ -317,7 +321,4 @@ cv::Mat Stabilizer::smoothedImage(cv::Mat frame, float dx, float dy)
     cv::Rect nPos(abs(dx) - dx + 5, abs(dy) - dy + 5, frame.cols, frame.rows);
 
     return blackIm(nPos);
-
-
-
 }
