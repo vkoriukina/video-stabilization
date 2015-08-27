@@ -193,10 +193,11 @@ void Stabilizer :: onlineProsessing(cv::VideoCapture cap)
 {
     char key = 0;
     int i = 0;
-    NumberOfPrevFames = 6;
+    NumberOfPrevFrames = 6;
     cv::Mat frame;
 
     cap >> prevFrame;
+    init(prevFrame);
 
     while(true)
     {
@@ -214,14 +215,14 @@ void Stabilizer :: onlineProsessing(cv::VideoCapture cap)
             yshift[i] += yshift[i - 1];
         }
 
-        if(i < NumberOfPrevFames)
+        if(i < NumberOfPrevFrames)
         {
             xsmoothed.push_back(xshift[i]);
             ysmoothed.push_back(yshift[i]);
         }
         else
         {
-            smooth();
+            onlineSmooth();
         }
 
         float dx = xsmoothed[i] - xshift[i];
@@ -233,13 +234,29 @@ void Stabilizer :: onlineProsessing(cv::VideoCapture cap)
         cv::imshow("onlineStabilization", show);
         key = cv::waitKey(1);
     }
+}
 
-    /*char key = 0;
+void Stabilizer :: onlineSmooth()
+{
+    int sumx = 0;
+    int sumy = 0;
+    int num = xshift.size();
+
+    sumx = (7 * xshift[num - 1] + 6 * xshift[num - 2] + 5 * xshift[num - 3] + 4 * xshift[num - 4] + 3 * xshift[num - 5] + 2 * xshift[num - 6] + 1 * xshift[num - 7]) / 28;
+    sumy = (7 * yshift[num - 1] + 6 * yshift[num - 2] + 5 * yshift[num - 3] + 4 * yshift[num - 4] + 3 * yshift[num - 5] + 2 * yshift[num - 6] + 1 * yshift[num - 7]) / 28;
+    xsmoothed.push_back(sumx);
+    ysmoothed.push_back(sumy);
+}
+
+void Stabilizer :: fastOfflineProsessing(cv::VideoCapture cap)
+{
+    char key = 0;
     int i = 0;
-    NumberOfPrevFames = 30;
+    Radius = 30;
     cv::Mat frame;
     cap >> prevFrame;
-    cap >> prevFrame;
+    init(prevFrame);
+    //cap >> prevFrame;
     while(true)
     {
         cap >> frame;
@@ -253,14 +270,14 @@ void Stabilizer :: onlineProsessing(cv::VideoCapture cap)
             xshift[i] += xshift[i - 1];
             yshift[i] += yshift[i - 1];
         }
-        if(i < 2 * NumberOfPrevFames)
+        if(i < 2 * Radius)
         {
             xsmoothed.push_back(xshift[i]);
             ysmoothed.push_back(yshift[i]);
         }
         else
         {
-            smooth(i - NumberOfPrevFames);
+            smooth(i - Radius);
             float dx = xsmoothed[i] - xshift[i];
             float dy = ysmoothed[i] - yshift[i];
             cv::Mat show = smoothedImage(frame, dx ,dy);
@@ -268,29 +285,25 @@ void Stabilizer :: onlineProsessing(cv::VideoCapture cap)
             key = cv::waitKey(1);
         }
     i++;
-    }*/
+    }
     
 }
 
-void Stabilizer :: smooth()
+void Stabilizer :: smooth(int pos)
 {
     int sumx = 0;
     int sumy = 0;
     int num = xshift.size();
-
-    sumx = (7 * xshift[num - 1] + 6 * xshift[num - 2] + 5 * xshift[num - 3] + 4 * xshift[num - 4] + 3 * xshift[num - 5] + 2 * xshift[num - 6] + 1 * xshift[num - 7]) / 28;
-    sumy = (7 * yshift[num - 1] + 6 * yshift[num - 2] + 5 * yshift[num - 3] + 4 * yshift[num - 4] + 3 * yshift[num - 5] + 2 * yshift[num - 6] + 1 * yshift[num - 7]) / 28;
-    xsmoothed.push_back(sumx);
-    ysmoothed.push_back(sumy);
-    /*for(int i = -NumberOfPrevFames; i <= NumberOfPrevFames; i++)
+    for(int i = -Radius; i <= Radius; i++)
     {
         sumx += xshift[pos + i];
         sumy += yshift[pos + i];
     }
-    xsmoothed.push_back(sumx / (2 * NumberOfPrevFames + 1));
-    ysmoothed.push_back(sumy / (2 * NumberOfPrevFames + 1));*/
+    xsmoothed.push_back(sumx / (2 * Radius + 1));
+    ysmoothed.push_back(sumy / (2 * Radius + 1));
 
 }
+
 
 
 cv::Mat Stabilizer::smoothedImage(cv::Mat frame, float dx, float dy)

@@ -14,7 +14,9 @@ class Stabilizer
     void generateFinalShift();
     void resizeVideo(cv::VideoCapture cap);
     void onlineProsessing(cv::VideoCapture cap);
-    void smooth();
+    void fastOfflineProsessing(cv::VideoCapture cap);
+    void smooth(int pos);
+    void onlineSmooth();
     cv::Mat smoothedImage(cv::Mat frame, float dx, float dy);
     void calcMaxShifts();
     void responce();
@@ -24,6 +26,7 @@ class Stabilizer
     std::vector<cv::Point2f> previousFeatures;
     int maxX, maxY;
     int maxUp, maxLeft,maxRight, maxDown;
-    int NumberOfPrevFames;
+    int Radius;
+    int NumberOfPrevFrames;
     bool flagUpdateFeatures;
 };
