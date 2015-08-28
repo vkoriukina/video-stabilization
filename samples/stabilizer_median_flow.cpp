@@ -5,22 +5,23 @@
 #include <time.h>
 
 const char* params =
-     "{   | video |       | video file to stabilize  }"
-     "{   | type  |       | type of stabilization    }";
+     "{ | help       | false | print help               }"
+     "{ | video      |       | video file to stabilize  }"
+     "{ | type       |       | type of stabilization    }"
+     "{ | medianflow | false | whether to use median flow instead of just optical flow }";
 
 
 int main( int argc, char** argv )
 {
     cv::CommandLineParser parser(argc, argv, params);
+    if (parser.get<bool>("help")) {
+        parser.printParams();
+        return 0;
+    }
     std::string video_file = parser.get<std::string>("video");
     std::string type = parser.get<std::string>("type");
 
-
-    
-  
-
     Stabilizer stab;
-
 
     if (type == "offline")
     {
@@ -43,8 +44,11 @@ int main( int argc, char** argv )
 
         while (true)
         {
-
-            stab.track(frame);
+            if (parser.get<bool>("medianflow")) {
+                stab.forward_backward_track(frame);
+            } else {
+                stab.track(frame);
+            }
 
             cap >> frame;
             if(frame.empty())
@@ -63,10 +67,6 @@ int main( int argc, char** argv )
 
         stab.calcMaxShifts();
         std::cout << clock() - time << "\n";
-
-        cv::VideoCapture cap2;
-        cap2.open( video_file );
-        stab.resizeVideo(cap2);
     }
 
     if (type == "online" )
@@ -82,6 +82,8 @@ int main( int argc, char** argv )
         cap2.open( video_file );
         stab.fastOfflineProsessing(cap2);
     }
+
+    stab.saveStabedVideo(video_file, "stab.avi");
 
     return 0;
 }
