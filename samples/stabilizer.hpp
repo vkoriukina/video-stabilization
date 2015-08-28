@@ -17,7 +17,12 @@ class Stabilizer
     void resizeVideo(cv::VideoCapture cap);
     void saveStabedVideo(const std::string& in_file,
         const std::string& out_file = "video_stab.avi") const;
-    void caclMaxShifts();
+    void onlineProsessing(cv::VideoCapture cap);
+    void fastOfflineProsessing(cv::VideoCapture cap);
+    void smooth(int pos);
+    void onlineSmooth(int num, float alfa);
+    cv::Mat smoothedImage(cv::Mat frame, float dx, float dy);
+    void calcMaxShifts();
     void responce();
 
     cv::Mat prevFrame;
@@ -25,4 +30,7 @@ class Stabilizer
     std::vector<cv::Point2f> previousFeatures;
     int maxX, maxY;
     int maxUp, maxLeft,maxRight, maxDown;
+    int Radius;
+    bool flagUpdateFeatures;
+    cv::VideoWriter writeOutputVideo;
 };

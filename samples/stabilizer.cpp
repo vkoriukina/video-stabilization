@@ -4,6 +4,7 @@
 #include <iostream>
 #include <fstream>
 
+#include "opencv2/highgui/highgui.hpp"
 #include "opencv2/imgproc/imgproc.hpp"
 #include "opencv2/video/video.hpp"
 
@@ -16,6 +17,7 @@ bool Stabilizer::init( const cv::Mat& frame)
     cv::cvtColor(frame, previous_frame_gray, cv::COLOR_BGR2GRAY);
    
     cv::goodFeaturesToTrack(previous_frame_gray, previousFeatures, 500, 0.1, 5);
+    flagUpdateFeatures = false;
 
 	return true;
 }
@@ -37,15 +39,19 @@ bool Stabilizer::track(const cv::Mat& frame)
     cv::Mat previous_frame_gray;
     cv::cvtColor(prevFrame, previous_frame_gray, cv::COLOR_BGR2GRAY);
   
-    cv::goodFeaturesToTrack(previous_frame_gray, previousFeatures, 500, 0.01, 5);
-
     size_t n = previousFeatures.size();
     CV_Assert(n);
+
+    if (flagUpdateFeatures) {
+        cv::goodFeaturesToTrack(previous_frame_gray, previousFeatures, 500, 0.01, 5);
+        flagUpdateFeatures = false;
+    }
     
     // Compute optical flow in selected points.
     std::vector<cv::Point2f> currentFeatures;
     std::vector<uchar> state;
     std::vector<float> error;
+
     cv::calcOpticalFlowPyrLK(prevFrame, frame, previousFeatures, currentFeatures, state, error);
 
     float median_error = median<float>(error);
@@ -82,7 +88,14 @@ bool Stabilizer::track(const cv::Mat& frame)
     xshift.push_back(median_shift.x);
     yshift.push_back(median_shift.y);
 
+    if (s < 100) {
+        previousFeatures.clear();
+        previousFeatures = currentFeatures;
+        flagUpdateFeatures = true;
+    }
+
     prevFrame = frame.clone(); 
+
     return true;
 }
 
@@ -265,7 +278,7 @@ void Stabilizer::saveStabedVideo(const std::string& in_file, const std::string& 
 }
 
 
-void Stabilizer::caclMaxShifts(){
+void Stabilizer::calcMaxShifts(){
     generateFinalShift();
     float x = 0,y = 0;
     for (int i = 0 ; i < xshift.size(); i++){
@@ -287,4 +300,131 @@ void Stabilizer::responce(){
         out_Xtrajectories << xshift[i] << " " <<  xsmoothed[i] << endl; 
         out_Ytrajectories << yshift[i] << " " <<  ysmoothed[i] << endl;
     }
+}
+
+void Stabilizer :: onlineProsessing(cv::VideoCapture cap)
+{
+    char key = 0;
+    int i = 0;
+    float alfa = 0.25;
+    //NumberOfPrevFrames = 6;
+    cv::Mat frame;
+
+    cap >> prevFrame;
+    cap >> prevFrame;
+    init(prevFrame);
+    while(true)
+    {
+        cap >> frame;
+        if(frame.empty())
+            break;
+        if(key == 27)
+            break;
+
+        track(frame);
+
+
+
+        if(i == 0)
+        {
+            xsmoothed.push_back(xshift[i]);
+            ysmoothed.push_back(yshift[i]);
+        }
+        else
+        {
+            xshift[i] += xshift[i - 1];
+            yshift[i] += yshift[i - 1];
+
+            onlineSmooth(i, alfa);
+        }
+
+        float dx = xsmoothed[i] - xshift[i];
+        float dy = ysmoothed[i] - yshift[i];
+
+        i++;
+
+        cv::Mat show = smoothedImage(frame, dx ,dy);
+        cv::imshow("onlineStabilization", show);
+        key = cv::waitKey(1);
+    }
+}
+
+void Stabilizer :: onlineSmooth(int num, float alfa)
+{
+    float solx = xsmoothed[num - 1] + alfa * (xshift[num] - xsmoothed[num - 1]);
+    float soly = ysmoothed[num - 1] + alfa * (yshift[num] - ysmoothed[num - 1]);
+
+    xsmoothed.push_back(solx);
+    ysmoothed.push_back(soly);
+}
+
+void Stabilizer :: fastOfflineProsessing(cv::VideoCapture cap)
+{
+    char key = 0;
+    int i = 0;
+    Radius = 30;
+    cv::Mat frame;
+    cap >> prevFrame;
+    cap >> prevFrame;
+    //cv::Mat BlackScreen(prevFrame.cols + 2000, prevFrame.rows + 2000,  
+    init(prevFrame);
+    //cap >> prevFrame;
+    while(true)
+    {
+        cap >> frame;
+        if(frame.empty())
+            break;
+        if(key == 27)
+            break;
+        track(frame);
+        if(i != 0)
+        {
+            xshift[i] += xshift[i - 1];
+            yshift[i] += yshift[i - 1];
+        }
+        if(i < 2 * Radius)
+        {
+            xsmoothed.push_back(xshift[i]);
+            ysmoothed.push_back(yshift[i]);
+        }
+        else
+        {
+            smooth(i - Radius);
+            float dx = xsmoothed[i] - xshift[i];
+            float dy = ysmoothed[i] - yshift[i];
+            cv::Mat show = smoothedImage(frame, dx ,dy);
+            cv::imshow("onlineStabilization", show);
+            key = cv::waitKey(1);
+        }
+    i++;
+    }
+    
+}
+
+void Stabilizer :: smooth(int pos)
+{
+    int sumx = 0;
+    int sumy = 0;
+    int num = xshift.size();
+    for(int i = -Radius; i <= Radius; i++)
+    {
+        sumx += xshift[pos + i];
+        sumy += yshift[pos + i];
+    }
+    xsmoothed.push_back(sumx / (2 * Radius + 1));
+    ysmoothed.push_back(sumy / (2 * Radius + 1));
+
+}
+
+cv::Mat Stabilizer::smoothedImage(cv::Mat frame, float dx, float dy)
+{
+    cv::Mat blackIm(frame.rows + 2 * abs(dy) + 10, frame.cols + 2 * abs(dx) + 10, 16);
+    blackIm.setTo(cv::Scalar(0, 0, 0));
+
+    cv::Rect pos(abs(dx) + 5, abs(dy) + 5, frame.cols, frame.rows);
+    frame.copyTo(blackIm(pos));
+
+    cv::Rect nPos(abs(dx) - dx + 5, abs(dy) - dy + 5, frame.cols, frame.rows);
+
+    return blackIm(nPos);
 }
