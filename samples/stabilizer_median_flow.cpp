@@ -5,6 +5,7 @@
 #include <time.h>
 
 const char* params =
+     "{ | help       | false | print help               }"
      "{ | video      |       | video file to stabilize  }"
      "{ | type       |       | type of stabilization    }"
      "{ | medianflow | false | whether to use median flow instead of just optical flow }";
@@ -13,6 +14,10 @@ const char* params =
 int main( int argc, char** argv )
 {
     cv::CommandLineParser parser(argc, argv, params);
+    if (parser.get<bool>("help")) {
+        parser.printParams();
+        return 0;
+    }
     std::string video_file = parser.get<std::string>("video");
     std::string type = parser.get<std::string>("type");
 
